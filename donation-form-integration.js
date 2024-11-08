@@ -303,7 +303,10 @@ $(document).ready(function() {
               // Check if ecard is selected by checking if value is 'e-card'
               if ($form.find('[data-donate="ecard-selection"] input:checked').val() === 'e-card') {
                   // Get the selected ecard design value
-                  const selectedTemplateId = parseInt($form.find('[data-donate="ecard-design"] input:checked').val(), 10);
+                  let selectedTemplateId = parseInt($form.find('[data-donate="ecard-design"] input:checked').val(), 10);
+                  if (isNaN(selectedTemplateId)) {
+                      selectedTemplateId = parseInt($form.find('[data-donate="ecard-design"] input:visible:first').val(), 10);
+                  }
                   
                   tributeObject.eCard = {
                       templateId: selectedTemplateId,
