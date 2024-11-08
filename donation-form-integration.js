@@ -312,13 +312,21 @@ $(document).ready(function() {
                       templateId: selectedTemplateId,
                       message: $form.find('[data-donate="message"]').val().trim(), 
                       deliveryDate: $form.find('[data-donate="date"]').val().trim(),
-                      recipients: [
-                          {
-                              firstName: $form.find('[data-donate="recipient-first-name"]').val().trim(),
-                              lastName: $form.find('[data-donate="recipient-last-name"]').val().trim() || "",
-                              email: $form.find('[data-donate="recipient-email"]').val().trim()
+                      recipients: $form.find('[data-donate="add"]').map(function() {
+                          const $recipientBlock = $(this);
+                          const email = $recipientBlock.find('[data-donate="recipient-email"]').val().trim();
+                          const firstName = $recipientBlock.find('[data-donate="recipient-first-name"]').val().trim();
+                          const lastName = $recipientBlock.find('[data-donate="recipient-last-name"]').val().trim();
+                          
+                          // Only include recipients that have at least an email address
+                          if (email && firstName) {
+                              return {
+                                  firstName: firstName,
+                                  lastName: lastName || "",
+                                  email: email
+                              };
                           }
-                      ]
+                      }).get() // Convert jQuery object to array and filter out undefined values
                   };
               }
 
