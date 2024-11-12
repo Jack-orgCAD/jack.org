@@ -34,7 +34,8 @@ $(document).ready(function() {
       '34695': 'YE25M1',
       '34696': 'YE25M2',
       '34697': 'YE25M3',
-      '34698': 'YE25M4'
+      '34698': 'YE25M4',
+      '34769' : 'Fall25A'
     };
 
     if (utmSource && utmSourceMapping[utmSource]) {
