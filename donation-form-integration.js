@@ -141,6 +141,22 @@ $(document).ready(function() {
       }
     };
 
+    function getCardType(bin) {
+      const binStr = bin.toString();
+      // Check MasterCard (51-55)
+      if (/^5[1-5]/.test(binStr)) return 1;
+      // Check VISA (4)
+      if (/^4/.test(binStr)) return 2;
+      // Check AMEX (34, 37)
+      if (/^3[47]/.test(binStr)) return 3;
+      // Check Diners Club (36, 38)
+      if (/^3[68]/.test(binStr)) return 4;
+      // Check Discover (6011, 65)
+      if (/^6011|^65/.test(binStr)) return 5;
+      // Default to None (0)
+      return 0;
+    }
+
     function formatAndSubmitDonation($form, moneris_dataKey, moneris_bin) {
       const frequency = $form.find('[data-donate="frequency"] input:checked').val().toLowerCase().trim();
       const inHonour = $form.find('[data-donate="dedicate-this-donation"] input[type=checkbox]').is(":checked");
@@ -231,8 +247,8 @@ $(document).ready(function() {
           paymentToken: moneris_dataKey,
           cardNumber: moneris_bin,
           cardHolderName: formFields.cardholderName,
-          cardType:0, // Determine card type based on BIN
-          paymentMethod: 0, 
+          cardType: getCardType(moneris_bin), // Update card type based on BIN
+          paymentMethod: 0,
           payPalToken: "",
           payPalPayerId: "",
           payPalTotalAmount: 0,
