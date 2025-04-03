@@ -242,6 +242,7 @@ $(document).ready(function() {
           correspondanceLanguage: isFrench ? 2 : 1, 
           receiveCommunications: !optOutOfCommunications,
           allowDistributionOfDetails: isAnonymousDonation,
+          isCharityOrg: isDonatingOnBehalfOfCompany
         },
         paymentDetails: {
           paymentToken: moneris_dataKey,
