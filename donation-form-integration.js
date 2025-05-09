@@ -111,6 +111,12 @@ $(document).ready(function() {
                 if (error && error.Exception && error.Exception.Message === "Payment declined.") {
                   errorMessage = "Your payment was declined. Please check your card details and try again, or use a different payment method.";
                 }
+                // Fire Sentry for error tracking
+                Sentry.captureMessage('User failed to submit donation', 'error');
+
+                // Fire Zapier webhook for error tracking
+                fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/')
+                .catch(console.warn);
                 
                 window.currentDonationForm.find("#cc-error").text(errorMessage).show();
                 window.currentDonationForm.find('[data-donate="complete-button"]').prop('disabled', false);
