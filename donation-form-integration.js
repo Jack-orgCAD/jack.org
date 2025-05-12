@@ -114,9 +114,39 @@ $(document).ready(function() {
                 // Fire Sentry for error tracking
                 Sentry.captureMessage('User failed to submit donation', 'error');
 
-                // Fire Zapier webhook for error tracking
-                fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/')
-                .catch(console.warn);
+                // Get the IP and location info
+                fetch('https://ipapi.co/json/')
+                    .then(res => res.json())
+                    .then(ipData => {
+                      const formData = new FormData();
+
+                      formData.append('zapInfo', 'I3lM8dLSiA');
+                      // Add error info
+                      formData.append('error', errorMessage);
+                      formData.append('timestamp', new Date().toISOString());
+
+                      // Add browser info
+                      formData.append('userAgent', navigator.userAgent);
+                      formData.append('language', navigator.language);
+                      formData.append('platform', navigator.platform);
+                      formData.append('pageUrl', window.location.href);
+
+                      // Add IP/location info
+                      formData.append('ip', ipData.ip);
+                      formData.append('city', ipData.city);
+                      formData.append('region', ipData.region);
+                      formData.append('country', ipData.country_name);
+                      formData.append('latitude', ipData.latitude);
+                      formData.append('longitude', ipData.longitude);
+
+                      // Send to Zapier
+                      fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/', {
+                        method: 'POST',
+                        body: formData
+                      }).catch(console.warn);
+                    })
+                    .catch(console.warn);
+
                 
                 window.currentDonationForm.find("#cc-error").text(errorMessage).show();
                 window.currentDonationForm.find('[data-donate="complete-button"]').prop('disabled', false);
