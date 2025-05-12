@@ -107,7 +107,6 @@ $(document).ready(function() {
               })
               .catch(function(error) {
                 let errorMessage = "We're experiencing technical difficulties. Please try to donate at: " + FALLBACK_DONATION_URL;
-                console.log("here");
                 
                 if (error && error.Exception && error.Exception.Message === "Payment declined.") {
                   errorMessage = "Your payment was declined. Please check your card details and try again, or use a different payment method.";
