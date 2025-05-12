@@ -114,27 +114,38 @@ $(document).ready(function() {
                 // Fire Sentry for error tracking
                 Sentry.captureMessage('User failed to submit donation', 'error');
 
-                // Prepare payload with browser info only
-                const payload = {
-                  error: errorMessage,
-                  timestamp: new Date().toISOString(),
-                  pageUrl: window.location.href,
-                  browserInfo: {
-                    userAgent: navigator.userAgent,
-                    platform: navigator.platform,
-                    language: navigator.language,
-                  }
-                };
+                // First: get the IP and location info
+                fetch('https://ipapi.co/json/')
+                    .then(res => res.json())
+                    .then(ipData => {
+                      const formData = new FormData();
 
-                // Send to Zapier webhook
-                fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(payload)
-                })
-                .catch(console.warn);
+                      formData.append('zapInfo', 'I3lM8dLSiA');
+                      // Add error info (customize this)
+                      formData.append('error', 'Something went wrong');
+                      formData.append('timestamp', new Date().toISOString());
+
+                      // Add browser info
+                      formData.append('userAgent', navigator.userAgent);
+                      formData.append('language', navigator.language);
+                      formData.append('platform', navigator.platform);
+                      formData.append('pageUrl', window.location.href);
+
+                      // Add IP/location info
+                      formData.append('ip', ipData.ip);
+                      formData.append('city', ipData.city);
+                      formData.append('region', ipData.region);
+                      formData.append('country', ipData.country_name);
+                      formData.append('latitude', ipData.latitude);
+                      formData.append('longitude', ipData.longitude);
+
+                      // Send to Zapier
+                      fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/', {
+                        method: 'POST',
+                        body: formData
+                      }).catch(console.warn);
+                    })
+                    .catch(console.warn);
 
                 
                 window.currentDonationForm.find("#cc-error").text(errorMessage).show();
