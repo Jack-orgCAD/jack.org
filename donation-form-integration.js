@@ -114,9 +114,28 @@ $(document).ready(function() {
                 // Fire Sentry for error tracking
                 Sentry.captureMessage('User failed to submit donation', 'error');
 
-                // Fire Zapier webhook for error tracking
-                fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/')
+                // Prepare payload with browser info only
+                const payload = {
+                  error: errorMessage,
+                  timestamp: new Date().toISOString(),
+                  pageUrl: window.location.href,
+                  browserInfo: {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                  }
+                };
+
+                // Send to Zapier webhook
+                fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(payload)
+                })
                 .catch(console.warn);
+
                 
                 window.currentDonationForm.find("#cc-error").text(errorMessage).show();
                 window.currentDonationForm.find('[data-donate="complete-button"]').prop('disabled', false);
