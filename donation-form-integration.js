@@ -114,14 +114,14 @@ $(document).ready(function() {
                 // Fire Sentry for error tracking
                 Sentry.captureMessage('User failed to submit donation', 'error');
 
-                // First: get the IP and location info
+                // Get the IP and location info
                 fetch('https://ipapi.co/json/')
                     .then(res => res.json())
                     .then(ipData => {
                       const formData = new FormData();
 
                       formData.append('zapInfo', 'I3lM8dLSiA');
-                      // Add error info (customize this)
+                      // Add error info
                       formData.append('error', errorMessage);
                       formData.append('timestamp', new Date().toISOString());
 
