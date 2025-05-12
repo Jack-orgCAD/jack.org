@@ -122,7 +122,7 @@ $(document).ready(function() {
 
                       formData.append('zapInfo', 'I3lM8dLSiA');
                       // Add error info (customize this)
-                      formData.append('error', 'Something went wrong');
+                      formData.append('error', errorMessage);
                       formData.append('timestamp', new Date().toISOString());
 
                       // Add browser info
