@@ -106,7 +106,8 @@ $(document).ready(function() {
                 return true;
               })
               .catch(function(error) {
-                let errorMessage = "We're experiencing technical difficulties. Please try to donate at " + FALLBACK_DONATION_URL;
+                let errorMessage = "We're experiencing technical difficulties. Please try to donate at: " + FALLBACK_DONATION_URL;
+                console.log("here");
                 
                 if (error && error.Exception && error.Exception.Message === "Payment declined.") {
                   errorMessage = "Your payment was declined. Please check your card details and try again, or use a different payment method.";
@@ -143,9 +144,9 @@ $(document).ready(function() {
                       fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/', {
                         method: 'POST',
                         body: formData
-                      }).catch(console.warn);
+                      }).catch( Sentry.captureMessage('Capture user data failed', 'error'));
                     })
-                    .catch(console.warn);
+                    .catch( Sentry.captureMessage('User failed to submit donation', 'error'));
 
                 
                 window.currentDonationForm.find("#cc-error").text(errorMessage).show();
