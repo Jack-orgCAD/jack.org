@@ -5,6 +5,7 @@ $(document).ready(function() {
     const AUTHENTICATION_URL = 'https://security.dm.akaraisin.com/api/authentication';
     const MONERIS_TOKEN_URL = 'https://www3.moneris.com/HPPtoken/index.php';
     const CONSTITUENT_API_URL = 'https://api.akaraisin.com/v2/constituent';
+    const PAYPAL_INIT_URL = 'https://api.akaraisin.com/v2/payment/paypal';
     const FALLBACK_DONATION_URL = 'https://jack.akaraisin.com/ui/donatenow';
 
     let jwtToken = '';
@@ -80,10 +81,247 @@ $(document).ready(function() {
       });
     }
 
+    // Check if we're returning from PayPal
+    function checkPayPalReturn() {
+      const payPalToken = getUrlParameter('token');
+      const payPalPayerId = getUrlParameter('PayerID');
+      const transactionId = getUrlParameter('txid');
+      
+      if (payPalToken && payPalPayerId && transactionId) {
+        const formData = JSON.parse(localStorage.getItem('paypal_' + transactionId));
+        // Continue processing...
+      }
+    }
+
+    // Check for PayPal return on page load
+    if (checkPayPalReturn()) {
+      // Already handling PayPal return, don't proceed with normal form init
+      return;
+    }
+
     function doCCSubmit() {
       var ccFrameRef = document.getElementById("monerisFrame").contentWindow;
       ccFrameRef.postMessage("tokenize", MONERIS_TOKEN_URL);
       return false;
+    }
+
+    function initiatePayPalPayment($form) {
+      // Save form data to sessionStorage for retrieval after PayPal redirect
+      const formSelector = `form[data-donate-form="${$form.attr('data-donate-form')}"]`;
+      const formData = getFormData($form);
+      formData.formSelector = formSelector;
+      
+      sessionStorage.setItem('donationFormData', JSON.stringify(formData));
+      
+      // Generate return and cancel URLs
+      const currentUrl = window.location.href.split('?')[0]; // Remove any existing query params
+      const transactionId = Date.now() + "-" + Math.random().toString(36).substring(2, 15);
+      const returnUrl = currentUrl + "?txid=" + transactionId;
+      const cancelUrl = currentUrl;
+      
+      // Get donation amount
+      let donationAmount;
+      const selectedAmount = $form.find('[data-donate="amount"] input:checked').val().trim();
+      if (selectedAmount === 'Other') {
+        donationAmount = $form.find('[data-donate="other-amount"]').val().trim().replace('$', '');
+      } else {
+        donationAmount = selectedAmount.replace('$', '');
+      }
+      
+      // Create payload for PayPal initialization
+      const payloadData = createPayPalPayload($form, donationAmount, returnUrl, cancelUrl);
+      
+      // Get JWT token and then make PayPal initialization request
+      getJWTToken()
+        .then(function(response) {
+          jwtToken = response;
+          
+          return $.ajax({
+            url: PAYPAL_INIT_URL + `?returnUrl=${encodeURIComponent(returnUrl)}&cancelUrl=${encodeURIComponent(cancelUrl)}`,
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + jwtToken,
+              'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(payloadData)
+          });
+        })
+        .then(function(response) {
+          if (response && response.payPalUrl) {
+            // Redirect to PayPal
+            window.location.href = response.payPalUrl;
+          } else {
+            throw new Error('Invalid PayPal response');
+          }
+        })
+        .catch(function(error) {
+          $form.find("#cc-error").text("Failed to initialize PayPal payment. Please try again.").show();
+          $form.find('[data-donate="complete-button"]').prop('disabled', false);
+          $form.find('[data-donate="complete-button"] .btn_main_text').text('Donate');
+          toggleProcessing(false);
+        });
+    }
+
+    // Helper function to create PayPal payload
+    function createPayPalPayload($form, donationAmount, returnUrl, cancelUrl) {
+      const formData = getFormData($form);
+      const frequency = $form.find('[data-donate="frequency"] input:checked').val().toLowerCase().trim();
+      const isDedicatedDonation = formData.inHonour || formData.inMemory;
+      
+      const donationType = (() => {
+        if (isDedicatedDonation) {
+          switch (frequency) {
+            case 'one-time': return formData.inMemory ? 3 : 2;   // In Memory or In Honour Donation
+            case 'monthly': return formData.inMemory ? 12 : 7;   // In Memory or In Honour Monthly
+            case 'quarterly': return formData.inMemory ? 21 : 9; // In Memory or In Honour Quarterly
+            case 'annual': return formData.inMemory ? 22 : 10;   // In Memory or In Honour Annual
+            default: return formData.inMemory ? 3 : 2;           // Default to One-time
+          }
+        } else {
+          switch (frequency) {
+            case 'one-time': return 1;   // General Donation
+            case 'monthly': return 4;     // General Monthly
+            case 'quarterly': return 5;   // General Quarterly
+            case 'annual': return 6;      // General Annual
+            default: return 1;            // Default to General Donation
+          }
+        }
+      })();
+      
+      return {
+        profile: {
+          userId: 0,
+          contactType: formData.isDonatingOnBehalfOfCompany ? 1 : 0,
+          constituentType: 0,
+          title: null,
+          firstName: formData.firstName,
+          middleName: null,
+          lastName: formData.lastName,
+          emailType: null,
+          email: formData.email,
+          username: null,
+          password: null,
+          confirmPassword: null,
+          organization: formData.isDonatingOnBehalfOfCompany ? formData.organization : null,
+          phoneType: null,
+          phone: formData.phone || "",
+          phoneExtension: null,
+          goal: null,
+          dateOfBirth: null,
+          gender: null,
+          interfaceLanguage: isFrench ? 2 : 1,
+          correspondanceLanguage: isFrench ? 2 : 1,
+          customField1: null,
+          customField2: null,
+          customField3: null,
+          customField4: null,
+          customField5: null,
+          lastModified: "0001-01-01T00:00:00",
+          subEventUserLastModified: "0001-01-01T00:00:00",
+          address: {
+            addressType: null,
+            line1: formData.address,
+            line2: formData.address2 || null,
+            city: formData.city,
+            regionId: parseInt(formData.regionId, 10),
+            region: null,
+            postalCode: formData.postCode,
+            countryId: parseInt(formData.countryId, 10),
+            country: null
+          },
+          receiveCommunications: !formData.optOutOfCommunications,
+          allowDistributionOfDetails: formData.isAnonymousDonation,
+          privacy: false,
+          personalDataUseExplicitConsent: null,
+          accountInfo: null
+        },
+        paymentDetails: {
+          cardNumber: null,
+          cardHolderName: "",
+          cardExpiration: null,
+          cardType: 0,
+          billingProfile: null,
+          cardExpirationDate: null,
+          cardTypeTitle: null,
+          creditCardNumberMasked: null,
+          cvv: null,
+          isVisaCheckOutAllowed: false,
+          payPalCurrency: null,
+          payPalPayerId: null,
+          payPalToken: null,
+          payPalTotalAmount: 0,
+          paymentMethod: 1, // PayPal
+          reCaptchaError: null,
+          transactionAttribute: null
+        },
+        purchaseItems: [
+          {
+            promoCode: null,
+            itemId: 0,
+            typeLabel: "Donation",
+            category: "Donation",
+            category2: "",
+            category3: "",
+            registrationFee: 0,
+            minFundRaisingGoal: 0,
+            suggestedFundRaisingGoal: 0,
+            name: "",
+            type: donationType,
+            $type: "GeneralDonationItem",
+            quantity: 0,
+            donationAmount: parseFloat(donationAmount),
+            isSelfDonation: false,
+            eventTypeId: 11,
+            subEventGroupId: null,
+            sponsoredEntityType: 1,
+            sponsoredEntityId: null, // Would need to be set if required
+            sponsoredEntityName: null // Would need to be set if required
+          }
+        ],
+        surveys: [],
+        returningUserId: null,
+        importSubEventId: null,
+        failedTransactionUserId: null,
+        authorizedRole: null,
+        subEventGroupId: null,
+        isAskedToCoverAdminFee: true
+      };
+    }
+
+    // Helper function to collect form data
+    function getFormData($form) {
+      const formFields = {
+        firstName: $form.find('[data-donate="first-name"]').val(),
+        lastName: $form.find('[data-donate="last-name"]').val(),
+        email: $form.find('[data-donate="email"]').val(),
+        phone: $form.find('[data-donate="phone"]').val(),
+        countryId: $form.find('[data-donate="country"]').val(),
+        address: $form.find('[data-donate="address"]').val(),
+        address2: $form.find('[data-donate="address-2"]').val(),
+        city: $form.find('[data-donate="city"]').val(),
+        regionId: $form.find('[data-donate="region"]').val(),
+        postCode: $form.find('[data-donate="post-code"]').val(),
+        organization: $form.find('[data-donate="company-name"]').val(),
+        cardholderName: $form.find('[data-donate="cardholder-name"]').val(),
+        tributeeFirstName: $form.find('[data-donate="tributee-first-name"]').val(),
+        tributeeLastName: $form.find('[data-donate="tributee-last-name"]').val(),
+        inHonour: $form.find('[data-donate="dedicate-this-donation"] input[type=checkbox]').is(":checked"),
+        inMemory: $form.find('[data-donate="dedicate-in-memory"] input[type=checkbox]').is(":checked"),
+        isDonatingOnBehalfOfCompany: $form.find('[data-donate="donate-company"] input[type=checkbox]').is(":checked"),
+        isAdminFee: $form.find('[data-donate="admin-cost"] input[type=checkbox]').is(":checked"),
+        optOutOfCommunications: $form.find('[data-donate="opt-out"] input[type=checkbox]').is(":checked"),
+        isAnonymousDonation: $form.find('[data-donate="donate-anonymously"] input[type=checkbox]').is(":checked"),
+        frequency: $form.find('[data-donate="frequency"] input:checked').val().toLowerCase().trim()
+      };
+
+      // Trim all string values
+      Object.keys(formFields).forEach(key => {
+        if (typeof formFields[key] === 'string') {
+          formFields[key] = formFields[key].trim();
+        }
+      });
+
+      return formFields;
     }
 
     var respMsg = function (e) {
@@ -193,7 +431,7 @@ $(document).ready(function() {
       return 0;
     }
 
-    function formatAndSubmitDonation($form, moneris_dataKey, moneris_bin) {
+    function formatAndSubmitDonation($form, moneris_dataKey, moneris_bin, paypalData) {
       const frequency = $form.find('[data-donate="frequency"] input:checked').val().toLowerCase().trim();
       const inHonour = $form.find('[data-donate="dedicate-this-donation"] input[type=checkbox]').is(":checked");
       const inMemory = $form.find('[data-donate="dedicate-in-memory"] input[type=checkbox]').is(":checked");
@@ -255,6 +493,9 @@ $(document).ready(function() {
         donationAmount = selectedAmount.replace('$', '');
       }
 
+      // Determine payment method (0 for credit card, 1 for PayPal)
+      const paymentMethod = paypalData ? 1 : 0;
+
       const jsonData = {
         profile: {
           address: {
@@ -281,15 +522,15 @@ $(document).ready(function() {
           isCharityOrg: isDonatingOnBehalfOfCompany
         },
         paymentDetails: {
-          paymentToken: moneris_dataKey,
-          cardNumber: moneris_bin,
-          cardHolderName: formFields.cardholderName,
-          cardType: getCardType(moneris_bin), // Update card type based on BIN
-          paymentMethod: 0,
-          payPalToken: "",
-          payPalPayerId: "",
-          payPalTotalAmount: 0,
-          payPalCurrency: "",
+          paymentMethod: paymentMethod,
+          cardHolderName: paymentMethod === 0 ? formFields.cardholderName : "",
+          cardType: paymentMethod === 0 ? getCardType(moneris_bin) : 0,
+          paymentToken: paymentMethod === 0 ? moneris_dataKey : "",
+          cardNumber: paymentMethod === 0 ? moneris_bin : "",
+          payPalToken: paymentMethod === 1 ? (paypalData ? paypalData.payPalToken : "") : "",
+          payPalPayerId: paymentMethod === 1 ? (paypalData ? paypalData.payPalPayerId : "") : "",
+          payPalTotalAmount: paymentMethod === 1 ? parseFloat(donationAmount) : 0,
+          payPalCurrency: paymentMethod === 1 ? "CAD" : "",
           isVisaCheckOutAllowed: false,
           reCaptchaError: ""
         },
@@ -492,6 +733,19 @@ $(document).ready(function() {
         }
     }
 
+    // Add event listener for payment method selection
+    $(document).on("change", '[data-donate="payment-method"] input[type="radio"]', function() {
+      const paymentMethod = $(this).val();
+      
+      if (paymentMethod === "credit-card") {
+        $('[data-donate="credit-card-fields"]').show();
+        $('[data-donate="paypal-fields"]').hide();
+      } else if (paymentMethod === "paypal") {
+        $('[data-donate="credit-card-fields"]').hide();
+        $('[data-donate="paypal-fields"]').show();
+      }
+    });
+
     $(document).on("click", '[data-donate="complete-button"]', function (e) {
       e.preventDefault();
       
@@ -507,7 +761,16 @@ $(document).ready(function() {
       
       window.currentDonationForm = $form;
       
-      doCCSubmit();
+      // Determine which payment method is selected
+      const paymentMethod = $form.find('[data-donate="payment-method"] input[type="radio"]:checked').val();
+      
+      if (paymentMethod === "paypal") {
+        // Handle PayPal payment
+        initiatePayPalPayment($form);
+      } else {
+        // Default to credit card payment
+        doCCSubmit();
+      }
     });
 
     if (window.addEventListener) {
