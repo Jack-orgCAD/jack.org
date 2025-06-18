@@ -22,15 +22,15 @@ $(document).ready(function () {
       Group: 4,
     },
     utmSourceMapping: {
-      34705: 'YE25BRE',
-      34694: 'YE25W',
-      34700: 'YE25A',
-      34703: 'YE25DM',
-      34695: 'YE25M1',
-      34696: 'YE25M2',
-      34697: 'YE25M3',
-      34698: 'YE25M4',
-      34769: 'Fall25A',
+      '34705': 'YE25BRE',
+      '34694': 'YE25W',
+      '34700': 'YE25A',
+      '34703': 'YE25DM',
+      '34695': 'YE25M1',
+      '34696': 'YE25M2',
+      '34697': 'YE25M3',
+      '34698': 'YE25M4',
+      '34769': 'Fall25A',
     },
   };
 
@@ -53,21 +53,21 @@ $(document).ready(function () {
   const DONATION_TYPES = {
     general: {
       'one-time': 1,
-      monthly: 4,
-      quarterly: 5,
-      annual: 6,
+      'monthly': 4,
+      'quarterly': 5,
+      'annual': 6,
     },
     honour: {
       'one-time': 2,
-      monthly: 7,
-      quarterly: 9,
-      annual: 10,
+      'monthly': 7,
+      'quarterly': 9,
+      'annual': 10,
     },
     memory: {
       'one-time': 3,
-      monthly: 12,
-      quarterly: 21,
-      annual: 22,
+      'monthly': 12,
+      'quarterly': 21,
+      'annual': 22,
     },
   };
 
@@ -146,17 +146,18 @@ $(document).ready(function () {
 
         // Frequency
         frequency: $form.find('[data-donate="frequency"] input:checked').val().toLowerCase().trim(),
+
+        // Donation Amount
+        donationAmount: (() => {
+          const selectedAmount = $form.find('[data-donate="amount"] input:checked').val().trim();
+          if (selectedAmount === 'Other') {
+            return $form.find('[data-donate="other-amount"]').val().trim().replace('$', '');
+          }
+          return selectedAmount.replace('$', '');
+        })(),
       };
 
       return utils.trimFormValues(fields);
-    },
-
-    getDonationAmount($form) {
-      const selectedAmount = $form.find('[data-donate="amount"] input:checked').val().trim();
-      if (selectedAmount === 'Other') {
-        return $form.find('[data-donate="other-amount"]').val().trim().replace('$', '');
-      }
-      return selectedAmount.replace('$', '');
     },
 
     getDonationType(formData) {
@@ -193,7 +194,7 @@ $(document).ready(function () {
         url: CONFIG.urls.constituentApi,
         method: 'POST',
         headers: {
-          Authorization: 'Bearer ' + state.jwtToken,
+          'Authorization': 'Bearer ' + state.jwtToken,
           'Content-Type': 'application/json',
         },
         data: JSON.stringify(data),
@@ -205,7 +206,7 @@ $(document).ready(function () {
         url: `${CONFIG.urls.paypalInit}?returnUrl=${encodeURIComponent(returnUrl)}&cancelUrl=${encodeURIComponent(cancelUrl)}`,
         method: 'POST',
         headers: {
-          Authorization: 'Bearer ' + state.jwtToken,
+          'Authorization': 'Bearer ' + state.jwtToken,
           'Content-Type': 'application/json',
         },
         data: JSON.stringify(payload),
@@ -234,10 +235,12 @@ $(document).ready(function () {
         correspondanceLanguage: state.isFrench ? 2 : 1,
         interfaceLanguage: state.isFrench ? 2 : 1,
         userId: 0,
+        title: '',
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: utils.formatPhoneNumber(formData.phone),
+        gender: '',
         organization: formData.isDonatingOnBehalfOfCompany ? formData.organization : '',
         receiveCommunications: !formData.optOutOfCommunications,
         allowDistributionOfDetails: formData.isAnonymousDonation,
@@ -245,7 +248,7 @@ $(document).ready(function () {
       };
     },
 
-    buildPaymentDetails(paypalData = null) {
+    buildPaymentDetails(paypalData = null, monerisData = null, formData = null) {
       const baseDetails = {
         cardNumber: null,
         cardHolderName: '',
@@ -272,6 +275,24 @@ $(document).ready(function () {
         };
       }
 
+      if (monerisData) {
+        return {
+          ...baseDetails,
+          cardNumber: monerisData.bin,
+          cardHolderName: formData.cardholderName,
+          cardExpiration: monerisData.cardExpiration,
+          cardType: utils.getCardType(monerisData.bin),
+          billingProfile: dataBuilders.buildProfile(formData),
+          cardExpirationDate: monerisData.cardExpirationDate,
+          cardTypeTitle: monerisData.cardTypeTitle,
+          creditCardNumberMasked: monerisData.creditCardNumberMasked,
+          cvv: monerisData.cvv,
+          isVisaCheckOutAllowed: monerisData.isVisaCheckOutAllowed,
+          reCaptchaError: monerisData.reCaptchaError,
+          transactionAttribute: monerisData.transactionAttribute,
+        };
+      }
+
       return {
         ...baseDetails,
         payPalCurrency: null,
@@ -282,7 +303,7 @@ $(document).ready(function () {
       };
     },
 
-    buildPurchaseItems(formData, donationAmount, donationType) {
+    buildPurchaseItems(formData, donationAmount, donationType, isPayPal = false) {
       const items = [
         {
           promoCode: null,
@@ -297,10 +318,10 @@ $(document).ready(function () {
           name: '',
           type: donationType,
           $type: 'GeneralDonationItem',
-          quantity: 0,
+          quantity: 1,
           donationAmount: parseFloat(donationAmount),
           isSelfDonation: false,
-          eventTypeId: 3,
+          eventTypeId: isPayPal ? 3 : 11, // 3 for PayPal, 11 for credit card
           subEventGroupId: null,
           sponsoredEntityType: CONFIG.sponsoredEntityTypes.Event,
           sponsoredEntityId: 34694,
@@ -391,6 +412,52 @@ $(document).ready(function () {
    * UI Functions
    */
   const ui = {
+    showDonateForm($form) {
+      // Check if this is a modal form
+      const $modal = $form.closest('[data-modal="item"]');
+
+      if ($modal.length) {
+        // This is a modal form - trigger the existing modal opening logic
+        // Find the specific donate button using the parent class
+        const $openButton = $('.nav_form_btn [data-modal="true"]').first();
+
+        if ($openButton.length) {
+          $openButton.trigger('click');
+        } else {
+          // Fallback: create a temporary timeline if no button exists
+          const tl = gsap.timeline({ paused: true });
+          tl.set($modal, { display: 'flex' });
+          tl.fromTo($modal, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+          tl.play();
+        }
+      }
+    },
+
+    hideDonationFormAndShowSuccess(frequency = 'one-time') {
+      // Hide the donation form
+      $('[data-name="Donation Form"]').hide();
+
+      // Show the appropriate success screen
+      if (frequency === 'one-time') {
+        $('[data-donate="success-otg"]').show();
+        $('[data-donate="success-monthly"]').hide();
+      } else if (frequency === 'monthly') {
+        $('[data-donate="success-monthly"]').show();
+        $('[data-donate="success-otg"]').hide();
+      }
+    },
+
+    showSuccessScreen(frequency = 'one-time') {
+      // Show the appropriate success screen based on frequency
+      if (frequency === 'one-time') {
+        $('[data-donate="success-otg"]').show();
+        $('[data-donate="success-monthly"]').hide();
+      } else if (frequency === 'monthly') {
+        $('[data-donate="success-monthly"]').show();
+        $('[data-donate="success-otg"]').hide();
+      }
+    },
+
     toggleProcessing(isProcessing) {
       state.isProcessing = isProcessing;
       $('body').toggleClass('form-submitting', isProcessing);
@@ -401,16 +468,6 @@ $(document).ready(function () {
       $form.find('[data-donate="complete-button"]').prop('disabled', false);
       $form.find('[data-donate="complete-button"] .btn_main_text').text('Donate');
       ui.toggleProcessing(false);
-    },
-
-    showSuccess(frequency) {
-      if (frequency === 'one-time') {
-        $('[data-donate="success-otg"]').show();
-        $('[data-donate="success-monthly"]').hide();
-      } else {
-        $('[data-donate="success-monthly"]').show();
-        $('[data-donate="success-otg"]').hide();
-      }
     },
 
     updateEcardDesigns(tributeType) {
@@ -450,16 +507,30 @@ $(document).ready(function () {
       try {
         state.jwtToken = await api.getJWTToken();
         const formData = formHelpers.getFormData($form);
-        const donationAmount = formHelpers.getDonationAmount($form);
         const donationType = formHelpers.getDonationType(formData);
 
         const donationData = {
           profile: dataBuilders.buildProfile(formData),
-          paymentDetails: dataBuilders.buildPaymentDetails(),
-          purchaseItems: dataBuilders.buildPurchaseItems(formData, donationAmount, donationType),
+          paymentDetails: dataBuilders.buildPaymentDetails({
+            cardNumber: state.monerisBin,
+            cardHolderName: formData.cardholderName,
+            cardType: utils.getCardType(state.monerisBin),
+            paymentMethod: 0,
+            payPalToken: '',
+            payPalPayerId: '',
+            payPalTotalAmount: 0,
+            payPalCurrency: '',
+            isVisaCheckOutAllowed: false,
+            reCaptchaError: '',
+          }),
+          purchaseItems: dataBuilders.buildPurchaseItems(formData, formData.donationAmount, donationType, false), // Credit card
           surveys: [],
           returningUserId: null,
           importSubEventId: null,
+          failedTransactionUserId: null,
+          authorizedRole: null,
+          subEventGroupId: null,
+          isAskedToCoverAdminFee: true,
         };
 
         const response = await api.submitDonation(donationData);
@@ -479,9 +550,10 @@ $(document).ready(function () {
       }
 
       // Store form data for retrieval after PayPal redirect
+      const formData = formHelpers.getFormData($form);
       const storedData = {
         formSelector: `#${formId}`,
-        formData: formHelpers.getFormData($form),
+        formData: formData,
         timestamp: Date.now(),
         formHtml: $form.prop('outerHTML'),
       };
@@ -490,14 +562,12 @@ $(document).ready(function () {
 
       // Generate URLs
       const currentUrl = window.location.href.split('?')[0];
-      const returnUrl = `${currentUrl}?donation-success&txid=${transactionId}`;
-      const cancelUrl = `${currentUrl}?donation-cancel`;
+      const returnUrl = `${currentUrl}?jack_donation=success&txid=${transactionId}`;
+      const cancelUrl = `${currentUrl}?jack_donation=cancel`;
 
       try {
         state.jwtToken = await api.getJWTToken();
-
-        const donationAmount = formHelpers.getDonationAmount($form);
-        const payload = paymentProcessors.createPayPalPayload($form, donationAmount);
+        const payload = paymentProcessors.createPayPalPayload($form, formData.donationAmount);
 
         const response = await api.initializePayPal(payload, returnUrl, cancelUrl);
 
@@ -526,7 +596,7 @@ $(document).ready(function () {
             payPalTotalAmount: 0,
             paymentMethod: 1,
           }),
-          purchaseItems: dataBuilders.buildPurchaseItems(formData, donationAmount, donationType),
+          purchaseItems: dataBuilders.buildPurchaseItems(formData, donationAmount, donationType, true), // PayPal
           surveys: [],
           returningUserId: null,
           importSubEventId: null,
@@ -561,6 +631,9 @@ $(document).ready(function () {
           throw new Error('Could not find donation form');
         }
 
+        //show donate form
+        ui.showDonateForm($form);
+
         state.currentForm = $form;
         ui.toggleProcessing(true);
         $form.find('[data-donate="complete-button"]').prop('disabled', true);
@@ -568,14 +641,13 @@ $(document).ready(function () {
 
         state.jwtToken = await api.getJWTToken();
 
-        const formData = formHelpers.getFormData($form);
-        const donationAmount = formHelpers.getDonationAmount($form);
+        const formData = storedData.formData; // Use the stored form data directly
         const donationType = formHelpers.getDonationType(formData);
 
         const paypalData = {
           payPalToken: payPalToken,
           payPalPayerId: payPalPayerId,
-          payPalTotalAmount: parseFloat(donationAmount),
+          payPalTotalAmount: parseFloat(formData.donationAmount),
           payPalCurrency: 'CAD',
           paymentMethod: 1,
         };
@@ -583,14 +655,28 @@ $(document).ready(function () {
         const donationData = {
           profile: dataBuilders.buildProfile(formData),
           paymentDetails: dataBuilders.buildPaymentDetails(paypalData),
-          purchaseItems: dataBuilders.buildPurchaseItems(formData, donationAmount, donationType),
+          purchaseItems: dataBuilders.buildPurchaseItems(formData, formData.donationAmount, donationType, true), // PayPal
           surveys: [],
           returningUserId: null,
           importSubEventId: null,
+          failedTransactionUserId: null,
+          authorizedRole: null,
+          subEventGroupId: null,
+          isAskedToCoverAdminFee: true,
         };
 
         const response = await api.submitDonation(donationData);
         sessionStorage.removeItem(`paypal_${transactionId}`);
+
+        // Clear URL parameters after successful processing
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('token');
+        currentUrl.searchParams.delete('PayerID');
+        currentUrl.searchParams.delete('txid');
+        currentUrl.searchParams.delete('jack_donation');
+
+        // Update browser history without the PayPal parameters
+        window.history.replaceState({}, document.title, currentUrl.toString());
 
         return paymentProcessors.handleDonationResponse(response, formData.frequency);
       } catch (error) {
@@ -631,10 +717,28 @@ $(document).ready(function () {
       if (parsedResponse.Success === true) {
         const txCode = parsedResponse.Result.Transaction.TxCode;
         $('[data-donate="transaction-number"]').text(txCode);
-        ui.showSuccess(frequency);
+        ui.showSuccessScreen(frequency);
         ui.toggleProcessing(false);
         return parsedResponse;
       } else {
+        // Log error to Sentry with transaction details
+        if (typeof Sentry !== 'undefined') {
+          Sentry.withScope(function (scope) {
+            // Add payment specific error details
+            scope.setExtra('errorCode', parsedResponse.exception?.code);
+            scope.setExtra('errorMessage', parsedResponse.exception?.message);
+            scope.setExtra('paymentStatus', parsedResponse.result?.paymentStatus);
+            scope.setExtra('paymentReason', parsedResponse.result?.reason);
+            scope.setExtra('transactionCode', parsedResponse.result?.transactionCode);
+            scope.setExtra('createdUserId', parsedResponse.result?.createdUserId);
+            scope.setExtra('fullResponse', JSON.stringify(parsedResponse));
+
+            // Set error level based on payment decline
+            scope.setLevel(parsedResponse.exception?.code === 4020 ? 'warning' : 'error');
+
+            Sentry.captureMessage(parsedResponse.exception?.code === 4020 ? 'Payment declined by payment processor' : 'Donation API returned failure response');
+          });
+        }
         throw new Error(`Donation failed: ${JSON.stringify(parsedResponse)}`);
       }
     },
@@ -718,16 +822,87 @@ $(document).ready(function () {
       state.monerisBin = respData.bin;
 
       try {
-        await paymentProcessors.processCreditCard(state.currentForm);
+        state.jwtToken = await api.getJWTToken();
+        const formData = formHelpers.getFormData(state.currentForm);
+        const donationType = formHelpers.getDonationType(formData);
+
+        const monerisData = {
+          dataKey: respData.dataKey,
+          bin: respData.bin,
+        };
+
+        const donationData = {
+          profile: dataBuilders.buildProfile(formData),
+          paymentDetails: dataBuilders.buildPaymentDetails(null, monerisData, formData),
+          purchaseItems: dataBuilders.buildPurchaseItems(formData, formData.donationAmount, donationType, false), // Credit card
+          surveys: [],
+          returningUserId: null,
+          importSubEventId: null,
+          failedTransactionUserId: null,
+          authorizedRole: null,
+          subEventGroupId: null,
+          isAskedToCoverAdminFee: true,
+        };
+
+        const response = await api.submitDonation(donationData);
+        const parsedResponse = paymentProcessors.handleDonationResponse(response, formData.frequency);
         state.currentForm.submit();
+        return true;
       } catch (error) {
         let errorMessage = `We're experiencing technical difficulties. Please try to donate at: ${CONFIG.urls.fallbackDonation}`;
 
-        if (error?.Exception?.Message === 'Payment declined.') {
+        if (error && error.Exception && error.Exception.Message === 'Payment declined.') {
           errorMessage = 'Your payment was declined. Please check your card details and try again, or use a different payment method.';
         }
 
+        // Fire Sentry for error tracking
+        if (typeof Sentry !== 'undefined') {
+          Sentry.captureMessage('User failed to submit donation', 'error');
+        }
+
+        // Get the IP and location info
+        fetch('https://ipapi.co/json/')
+          .then((res) => res.json())
+          .then((ipData) => {
+            const formData = new FormData();
+
+            formData.append('zapInfo', 'I3lM8dLSiA');
+            // Add error info
+            formData.append('error', errorMessage);
+            formData.append('timestamp', new Date().toISOString());
+
+            // Add browser info
+            formData.append('userAgent', navigator.userAgent);
+            formData.append('language', navigator.language);
+            formData.append('platform', navigator.platform);
+            formData.append('pageUrl', window.location.href);
+
+            // Add IP/location info
+            formData.append('ip', ipData.ip);
+            formData.append('city', ipData.city);
+            formData.append('region', ipData.region);
+            formData.append('country', ipData.country_name);
+            formData.append('latitude', ipData.latitude);
+            formData.append('longitude', ipData.longitude);
+
+            // Send to Zapier
+            fetch('https://hooks.zapier.com/hooks/catch/21900682/2q7wn2c/', {
+              method: 'POST',
+              body: formData,
+            }).catch(() => {
+              if (typeof Sentry !== 'undefined') {
+                Sentry.captureMessage('Capture user data failed', 'error');
+              }
+            });
+          })
+          .catch(() => {
+            if (typeof Sentry !== 'undefined') {
+              Sentry.captureMessage('User failed to submit donation', 'error');
+            }
+          });
+
         ui.showError(state.currentForm, errorMessage);
+        paymentProcessors.handleError(error, state.currentForm);
       }
     },
   };
@@ -763,6 +938,7 @@ $(document).ready(function () {
         if (state.isProcessing) return;
 
         const $form = $(this).closest('form');
+        $(this).css('opacity', '0.5');
         $(this).prop('disabled', true);
         state.currentForm = $form;
         paymentProcessors.processPayPal($form);
@@ -811,7 +987,7 @@ $(document).ready(function () {
     const isPayPalReturn = await paymentProcessors.handlePayPalReturn();
 
     // Only initialize event handlers if not processing PayPal return
-    //ToDo: may need this even if it's a paypal return
+    //    //ToDo: may need this even if it's a paypal return
     if (!isPayPalReturn) {
       eventHandlers.init();
     }
