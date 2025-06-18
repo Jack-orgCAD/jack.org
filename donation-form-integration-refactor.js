@@ -1,6 +1,16 @@
 $(document).ready(function () {
+  console.log('🔵 Donation form script loaded');
+  console.log('🔵 Document ready, checking for donation form...');
+
   // Skip initialization if no donation form exists
-  if (!$("[data-donate='complete-button']").length) return;
+  if (!$("[data-donate='complete-button']").length) {
+    console.log('🔵 No donation form found, exiting');
+    return;
+  }
+
+  console.log('🔵 Donation form found, proceeding with initialization');
+  console.log('🔵 Current URL:', window.location.href);
+  console.log('🔵 URL parameters:', window.location.search);
 
   /**
    * Configuration and Constants
@@ -78,13 +88,17 @@ $(document).ready(function () {
     getUrlParameter(name) {
       const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
       const results = regex.exec(location.search);
-      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+      const value = results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+      console.log('🔵 getUrlParameter:', { name, value });
+      return value;
     },
 
     formatPhoneNumber(phone) {
       if (!phone) return '';
       const digits = phone.replace(/\D/g, '');
-      return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+      const formatted = digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+      console.log('🔵 formatPhoneNumber:', { phone, formatted });
+      return formatted;
     },
 
     trimFormValues(obj) {
@@ -92,17 +106,22 @@ $(document).ready(function () {
       Object.keys(obj).forEach((key) => {
         trimmed[key] = typeof obj[key] === 'string' ? obj[key].trim() : obj[key];
       });
+      console.log('🔵 trimFormValues:', { original: obj, trimmed });
       return trimmed;
     },
 
     getCardType(bin) {
       const binStr = bin.toString();
-      if (/^5[1-5]/.test(binStr)) return 1; // MasterCard
-      if (/^4/.test(binStr)) return 2; // VISA
-      if (/^3[47]/.test(binStr)) return 3; // AMEX
-      if (/^3[68]/.test(binStr)) return 4; // Diners Club
-      if (/^6011|^65/.test(binStr)) return 5; // Discover
-      return 0; // Unknown
+      let cardType = 0;
+
+      if (/^5[1-5]/.test(binStr)) cardType = 1; // MasterCard
+      else if (/^4/.test(binStr)) cardType = 2; // VISA
+      else if (/^3[47]/.test(binStr)) cardType = 3; // AMEX
+      else if (/^3[68]/.test(binStr)) cardType = 4; // Diners Club
+      else if (/^6011|^65/.test(binStr)) cardType = 5; // Discover
+
+      console.log('🔵 getCardType:', { bin, cardType });
+      return cardType;
     },
   };
 
@@ -111,6 +130,8 @@ $(document).ready(function () {
    */
   const formHelpers = {
     getFormData($form) {
+      console.log('🔵 getFormData called for form:', $form.attr('id'));
+
       const fields = {
         // Personal Information
         firstName: $form.find('[data-donate="first-name"]').val(),
@@ -157,19 +178,25 @@ $(document).ready(function () {
         })(),
       };
 
-      return utils.trimFormValues(fields);
+      const trimmedFields = utils.trimFormValues(fields);
+      console.log('🔵 Form data collected:', trimmedFields);
+      return trimmedFields;
     },
 
     getDonationType(formData) {
       const { frequency, inHonour, inMemory } = formData;
       const isDedicated = inHonour || inMemory;
 
+      let donationType;
       if (!isDedicated) {
-        return DONATION_TYPES.general[frequency] || DONATION_TYPES.general['one-time'];
+        donationType = DONATION_TYPES.general[frequency] || DONATION_TYPES.general['one-time'];
+      } else {
+        const type = inMemory ? 'memory' : 'honour';
+        donationType = DONATION_TYPES[type][frequency] || DONATION_TYPES[type]['one-time'];
       }
 
-      const type = inMemory ? 'memory' : 'honour';
-      return DONATION_TYPES[type][frequency] || DONATION_TYPES[type]['one-time'];
+      console.log('🔵 getDonationType:', { frequency, inHonour, inMemory, isDedicated, donationType });
+      return donationType;
     },
   };
 
@@ -178,6 +205,7 @@ $(document).ready(function () {
    */
   const api = {
     getJWTToken() {
+      console.log('🔵 getJWTToken called');
       return $.ajax({
         url: CONFIG.urls.authentication,
         method: 'POST',
@@ -186,10 +214,19 @@ $(document).ready(function () {
           organizationId: CONFIG.organizationId,
           subEventCustomPart: state.subEventCustomPart,
         }),
-      });
+      })
+        .then((response) => {
+          console.log('🔵 JWT token response:', response);
+          return response;
+        })
+        .catch((error) => {
+          console.error('🔴 JWT token error:', error);
+          throw error;
+        });
     },
 
     submitDonation(data) {
+      console.log('🔵 submitDonation called with data:', data);
       return $.ajax({
         url: CONFIG.urls.constituentApi,
         method: 'POST',
@@ -198,10 +235,19 @@ $(document).ready(function () {
           'Content-Type': 'application/json',
         },
         data: JSON.stringify(data),
-      });
+      })
+        .then((response) => {
+          console.log('🔵 Donation submission response:', response);
+          return response;
+        })
+        .catch((error) => {
+          console.error('🔴 Donation submission error:', error);
+          throw error;
+        });
     },
 
     initializePayPal(payload, returnUrl, cancelUrl) {
+      console.log('🔵 initializePayPal called', { payload, returnUrl, cancelUrl });
       return $.ajax({
         url: `${CONFIG.urls.paypalInit}?returnUrl=${encodeURIComponent(returnUrl)}&cancelUrl=${encodeURIComponent(cancelUrl)}`,
         method: 'POST',
@@ -211,7 +257,15 @@ $(document).ready(function () {
         },
         data: JSON.stringify(payload),
         dataType: 'json',
-      });
+      })
+        .then((response) => {
+          console.log('🔵 PayPal initialization response:', response);
+          return response;
+        })
+        .catch((error) => {
+          console.error('🔴 PayPal initialization error:', error);
+          throw error;
+        });
     },
   };
 
@@ -265,6 +319,7 @@ $(document).ready(function () {
       };
 
       if (paypalData) {
+        console.log('🔵 Building PayPal payment details');
         return {
           ...baseDetails,
           payPalCurrency: paypalData.payPalCurrency,
@@ -276,23 +331,27 @@ $(document).ready(function () {
       }
 
       if (monerisData) {
-        return {
-          ...baseDetails,
+        console.log('🔵 Building Moneris payment details:', monerisData);
+
+        const paymentDetails = {
+          paymentToken: monerisData.dataKey,
           cardNumber: monerisData.bin,
-          cardHolderName: formData.cardholderName,
-          cardExpiration: monerisData.cardExpiration,
+          cardHolderName: formData.cardholderName || '',
           cardType: utils.getCardType(monerisData.bin),
-          billingProfile: dataBuilders.buildProfile(formData),
-          cardExpirationDate: monerisData.cardExpirationDate,
-          cardTypeTitle: monerisData.cardTypeTitle,
-          creditCardNumberMasked: monerisData.creditCardNumberMasked,
-          cvv: monerisData.cvv,
-          isVisaCheckOutAllowed: monerisData.isVisaCheckOutAllowed,
-          reCaptchaError: monerisData.reCaptchaError,
-          transactionAttribute: monerisData.transactionAttribute,
+          paymentMethod: 0,
+          payPalToken: '',
+          payPalPayerId: '',
+          payPalTotalAmount: 0,
+          payPalCurrency: '',
+          isVisaCheckOutAllowed: false,
+          reCaptchaError: '',
         };
+
+        console.log('🔵 Moneris payment details built:', paymentDetails);
+        return paymentDetails;
       }
 
+      console.log('🔵 Building default payment details');
       return {
         ...baseDetails,
         payPalCurrency: null,
@@ -317,18 +376,14 @@ $(document).ready(function () {
           suggestedFundRaisingGoal: 0,
           name: '',
           type: donationType,
-          $type: 'GeneralDonationItem',
           quantity: 1,
           donationAmount: parseFloat(donationAmount),
-          isSelfDonation: false,
-          eventTypeId: isPayPal ? 3 : 11, // 3 for PayPal, 11 for credit card
-          subEventGroupId: null,
-          sponsoredEntityType: CONFIG.sponsoredEntityTypes.Event,
-          sponsoredEntityId: 34694,
-          sponsoredEntityName: 'FY25 YE Appeal - Webpage',
           fundId: 10444,
           otherFundName: '',
           tribute: null,
+          eventTypeId: isPayPal ? 3 : 11, // 3 for PayPal, 11 for credit card
+          $type: 'GeneralDonationItem',
+          isSelfDonation: false,
         },
       ];
 
@@ -413,64 +468,90 @@ $(document).ready(function () {
    */
   const ui = {
     showDonateForm($form) {
+      console.log('🔵 showDonateForm called', { $form: $form.length, formId: $form.attr('id') });
+
       // Check if this is a modal form
       const $modal = $form.closest('[data-modal="item"]');
+      console.log('🔵 Modal check:', { isModal: $modal.length > 0, modalId: $modal.attr('id') });
 
       if ($modal.length) {
         // This is a modal form - trigger the existing modal opening logic
         // Find the specific donate button using the parent class
         const $openButton = $('.nav_form_btn [data-modal="true"]').first();
+        console.log('🔵 Looking for modal open button:', { found: $openButton.length, buttonId: $openButton.attr('id') });
 
         if ($openButton.length) {
+          console.log('🔵 Triggering modal open button click');
           $openButton.trigger('click');
         } else {
+          console.log('🔵 No modal button found, creating temporary timeline');
           // Fallback: create a temporary timeline if no button exists
           const tl = gsap.timeline({ paused: true });
           tl.set($modal, { display: 'flex' });
           tl.fromTo($modal, { opacity: 0 }, { opacity: 1, duration: 0.3 });
           tl.play();
         }
+      } else {
+        console.log('🔵 Not a modal form, no action needed');
       }
     },
 
     hideDonationFormAndShowSuccess(frequency = 'one-time') {
-      // Hide the donation form
-      $('[data-name="Donation Form"]').hide();
+      console.log('🔵 hideDonationFormAndShowSuccess called', { frequency });
 
+      // Hide the donation form
+      $('[data-name="Donation Form"], .nav_form_progress_wrap').hide();
+      console.log('🔵 Hide donation form');
+
+      // Show success message
+      $('.w-form-done').show();
+      console.log('🔵 Showing form success message');
       // Show the appropriate success screen
       if (frequency === 'one-time') {
         $('[data-donate="success-otg"]').show();
         $('[data-donate="success-monthly"]').hide();
+        console.log('🔵 Showing one-time success screen');
       } else if (frequency === 'monthly') {
         $('[data-donate="success-monthly"]').show();
         $('[data-donate="success-otg"]').hide();
+        console.log('🔵 Showing monthly success screen');
       }
     },
 
     showSuccessScreen(frequency = 'one-time') {
+      console.log('🔵 showSuccessScreen called', { frequency });
+
       // Show the appropriate success screen based on frequency
       if (frequency === 'one-time') {
         $('[data-donate="success-otg"]').show();
         $('[data-donate="success-monthly"]').hide();
+        console.log('🔵 Showing one-time success screen');
       } else if (frequency === 'monthly') {
         $('[data-donate="success-monthly"]').show();
         $('[data-donate="success-otg"]').hide();
+        console.log('🔵 Showing monthly success screen');
       }
     },
 
     toggleProcessing(isProcessing) {
+      console.log('🔵 toggleProcessing called', { isProcessing });
       state.isProcessing = isProcessing;
       $('body').toggleClass('form-submitting', isProcessing);
+      console.log('🔵 Processing state updated');
     },
 
     showError($form, message) {
+      console.log('🔵 showError called', { message, formId: $form?.attr('id') });
       $form.find('#cc-error').text(message).show();
       $form.find('[data-donate="complete-button"]').prop('disabled', false);
       $form.find('[data-donate="complete-button"] .btn_main_text').text('Donate');
       ui.toggleProcessing(false);
+      console.log('🔵 Error displayed on form');
     },
 
     updateEcardDesigns(tributeType) {
+      console.log('🔵 updateEcardDesigns called', { tributeType });
+
       const cardMappings = {
         honour: {
           english: ['3320', '2331', '2332'],
@@ -483,6 +564,7 @@ $(document).ready(function () {
       };
 
       const relevantCardIds = state.isFrench ? cardMappings[tributeType].french : cardMappings[tributeType].english;
+      console.log('🔵 Relevant card IDs:', relevantCardIds);
 
       $('[data-donate="ecard-design"]').hide();
 
@@ -496,6 +578,8 @@ $(document).ready(function () {
       if (visibleCards.length > 0 && selectedCard.length === 0) {
         visibleCards.first().find('input[type="radio"]').prop('checked', true);
       }
+
+      console.log('🔵 Ecard designs updated');
     },
   };
 
@@ -504,6 +588,7 @@ $(document).ready(function () {
    */
   const paymentProcessors = {
     async processCreditCard($form) {
+      console.log('🔵 processCreditCard called');
       try {
         state.jwtToken = await api.getJWTToken();
         const formData = formHelpers.getFormData($form);
@@ -542,15 +627,21 @@ $(document).ready(function () {
     },
 
     async processPayPal($form) {
-      const transactionId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      console.log('🔵 processPayPal called', { $form: $form.length, formId: $form.attr('id') });
+
       const formId = $form.attr('id') || `donation-form-${Date.now()}`;
+
+      console.log('🔵 Form ID:', formId);
 
       if (!$form.attr('id')) {
         $form.attr('id', formId);
+        console.log('🔵 Set form ID to:', formId);
       }
 
       // Store form data for retrieval after PayPal redirect
       const formData = formHelpers.getFormData($form);
+      console.log('🔵 Form data collected:', formData);
+
       const storedData = {
         formSelector: `#${formId}`,
         formData: formData,
@@ -558,35 +649,50 @@ $(document).ready(function () {
         formHtml: $form.prop('outerHTML'),
       };
 
-      sessionStorage.setItem(`paypal_${transactionId}`, JSON.stringify(storedData));
+      console.log('🔵 Storing PayPal data with key: paypal_form_data');
+      sessionStorage.setItem('paypal_form_data', JSON.stringify(storedData));
 
-      // Generate URLs
+      // Use current URL for both return and cancel
       const currentUrl = window.location.href.split('?')[0];
-      const returnUrl = `${currentUrl}?jack_donation=success&txid=${transactionId}`;
-      const cancelUrl = `${currentUrl}?jack_donation=cancel`;
+      const returnUrl = currentUrl;
+      const cancelUrl = currentUrl;
+
+      console.log('🔵 Using current URL for both return and cancel:', currentUrl);
 
       try {
+        console.log('🔵 Getting JWT token...');
         state.jwtToken = await api.getJWTToken();
-        const payload = paymentProcessors.createPayPalPayload($form, formData.donationAmount);
+        console.log('🔵 JWT token received:', state.jwtToken ? 'YES' : 'NO');
 
+        console.log('🔵 Creating PayPal payload...');
+        const payload = paymentProcessors.createPayPalPayload($form, formData.donationAmount);
+        console.log('🔵 PayPal payload created:', payload);
+
+        console.log('🔵 Initializing PayPal...');
         const response = await api.initializePayPal(payload, returnUrl, cancelUrl);
+        console.log('🔵 PayPal initialization response:', response);
 
         if (response?.PayPalUrl || response?.payPalUrl) {
-          window.location.href = response.PayPalUrl || response.payPalUrl;
+          const paypalUrl = response.PayPalUrl || response.payPalUrl;
+          console.log('🔵 Redirecting to PayPal URL:', paypalUrl);
+          window.location.href = paypalUrl;
         } else {
+          console.error('🔴 Invalid PayPal response - missing URL:', response);
           throw new Error('Invalid PayPal response: Missing PayPal URL');
         }
       } catch (error) {
+        console.error('🔴 PayPal initialization error:', error);
         ui.showError($form, 'Failed to initialize PayPal payment. Please try again.');
         paymentProcessors.handleError(error, $form);
       }
     },
 
     createPayPalPayload($form, donationAmount) {
+      console.log('🔵 createPayPalPayload called', { donationAmount });
       const formData = formHelpers.getFormData($form);
       const donationType = formHelpers.getDonationType(formData);
 
-      return [
+      const payload = [
         {
           profile: dataBuilders.buildProfile(formData),
           paymentDetails: dataBuilders.buildPaymentDetails({
@@ -606,121 +712,205 @@ $(document).ready(function () {
           isAskedToCoverAdminFee: true,
         },
       ];
+
+      console.log('🔵 PayPal payload created:', payload);
+      return payload;
     },
 
     async handlePayPalReturn() {
+      console.log('🔵 handlePayPalReturn called');
+      console.log('🔵 Full URL:', window.location.href);
+      console.log('🔵 Location search:', location.search);
+      console.log('🔵 Location hash:', location.hash);
+
+      // Check if we have PayPal parameters
       const payPalToken = utils.getUrlParameter('token');
       const payPalPayerId = utils.getUrlParameter('PayerID');
-      const transactionId = utils.getUrlParameter('txid');
 
-      if (!payPalToken || !payPalPayerId || !transactionId) {
+      console.log('🔵 PayPal return analysis:', {
+        payPalToken: payPalToken ? 'YES' : 'NO',
+        payPalPayerId: payPalPayerId ? 'YES' : 'NO',
+      });
+
+      // If no token at all, this isn't a PayPal return
+      if (!payPalToken) {
+        console.log('🔵 No PayPal token found, not a PayPal return');
         return false;
       }
 
-      const storedDataStr = sessionStorage.getItem(`paypal_${transactionId}`);
-      if (!storedDataStr) {
-        console.error('No stored PayPal data found for transaction:', transactionId);
-        return false;
-      }
+      // If we have token but no PayerID, it's a cancel
+      if (payPalToken && !payPalPayerId) {
+        console.log('🔵 PayPal payment was cancelled (token but no PayerID)');
+        sessionStorage.removeItem('paypal_form_data');
 
-      try {
-        const storedData = JSON.parse(storedDataStr);
-        const $form = paymentProcessors.findPayPalForm(storedData);
-
-        if (!$form || !$form.length) {
-          throw new Error('Could not find donation form');
-        }
-
-        //show donate form
-        ui.showDonateForm($form);
-
-        state.currentForm = $form;
-        ui.toggleProcessing(true);
-        $form.find('[data-donate="complete-button"]').prop('disabled', true);
-        $form.find('[data-donate="complete-button"] .btn_main_text').text('Processing...');
-
-        state.jwtToken = await api.getJWTToken();
-
-        const formData = storedData.formData; // Use the stored form data directly
-        const donationType = formHelpers.getDonationType(formData);
-
-        const paypalData = {
-          payPalToken: payPalToken,
-          payPalPayerId: payPalPayerId,
-          payPalTotalAmount: parseFloat(formData.donationAmount),
-          payPalCurrency: 'CAD',
-          paymentMethod: 1,
-        };
-
-        const donationData = {
-          profile: dataBuilders.buildProfile(formData),
-          paymentDetails: dataBuilders.buildPaymentDetails(paypalData),
-          purchaseItems: dataBuilders.buildPurchaseItems(formData, formData.donationAmount, donationType, true), // PayPal
-          surveys: [],
-          returningUserId: null,
-          importSubEventId: null,
-          failedTransactionUserId: null,
-          authorizedRole: null,
-          subEventGroupId: null,
-          isAskedToCoverAdminFee: true,
-        };
-
-        const response = await api.submitDonation(donationData);
-        sessionStorage.removeItem(`paypal_${transactionId}`);
-
-        // Clear URL parameters after successful processing
+        // Clear URL parameters
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.delete('token');
         currentUrl.searchParams.delete('PayerID');
-        currentUrl.searchParams.delete('txid');
-        currentUrl.searchParams.delete('jack_donation');
-
-        // Update browser history without the PayPal parameters
         window.history.replaceState({}, document.title, currentUrl.toString());
 
-        return paymentProcessors.handleDonationResponse(response, formData.frequency);
-      } catch (error) {
-        const $form = state.currentForm;
-        if ($form) {
-          ui.showError($form, 'There was an error processing your PayPal payment. Please try again or contact support.');
-        }
-        paymentProcessors.handleError(error, $form);
         return false;
       }
+
+      // If we have both token and PayerID, it's a success
+      if (payPalToken && payPalPayerId) {
+        console.log('🔵 PayPal payment successful (token and PayerID present)');
+
+        console.log('🔵 Looking for stored PayPal data with key: paypal_form_data');
+        const storedDataStr = sessionStorage.getItem('paypal_form_data');
+        if (!storedDataStr) {
+          console.error('🔴 No stored PayPal data found');
+          console.log('🔵 Available sessionStorage keys:', Object.keys(sessionStorage));
+          return false;
+        }
+
+        console.log('🔵 Found stored data, parsing...');
+        try {
+          const storedData = JSON.parse(storedDataStr);
+          console.log('🔵 Parsed stored data:', storedData);
+
+          console.log('🔵 Looking for form with selector:', storedData.formSelector);
+          const $form = paymentProcessors.findPayPalForm(storedData);
+          console.log('🔵 Form found:', { found: $form && $form.length, formId: $form?.attr('id') });
+
+          if (!$form || !$form.length) {
+            console.error('🔴 Could not find donation form');
+            throw new Error('Could not find donation form');
+          }
+
+          console.log('🔵 Showing donate form...');
+          ui.showDonateForm($form);
+          ui.hideDonationFormAndShowSuccess(storedData.formData.frequency);
+
+          state.currentForm = $form;
+          console.log('🔵 Set current form:', state.currentForm.length);
+
+          console.log('🔵 Toggling processing state...');
+          ui.toggleProcessing(true);
+          $form.find('[data-donate="complete-button"]').prop('disabled', true);
+          $form.find('[data-donate="complete-button"] .btn_main_text').text('Processing...');
+
+          console.log('🔵 Getting JWT token...');
+          state.jwtToken = await api.getJWTToken();
+          console.log('🔵 JWT token received:', state.jwtToken ? 'YES' : 'NO');
+
+          const formData = storedData.formData; // Use the stored form data directly
+          console.log('🔵 Using stored form data:', formData);
+
+          const donationType = formHelpers.getDonationType(formData);
+          console.log('🔵 Donation type:', donationType);
+
+          const paypalData = {
+            payPalToken: payPalToken,
+            payPalPayerId: payPalPayerId,
+            payPalTotalAmount: parseFloat(formData.donationAmount),
+            payPalCurrency: 'CAD',
+            paymentMethod: 1,
+          };
+
+          console.log('🔵 PayPal data prepared:', paypalData);
+
+          const donationData = {
+            profile: dataBuilders.buildProfile(formData),
+            paymentDetails: dataBuilders.buildPaymentDetails(paypalData),
+            purchaseItems: dataBuilders.buildPurchaseItems(formData, formData.donationAmount, donationType, true), // PayPal
+            surveys: [],
+            returningUserId: null,
+            importSubEventId: null,
+            failedTransactionUserId: null,
+            authorizedRole: null,
+            subEventGroupId: null,
+            isAskedToCoverAdminFee: true,
+          };
+
+          console.log('🔵 Donation data prepared:', donationData);
+          console.log('🔵 Submitting donation...');
+
+          const response = await api.submitDonation(donationData);
+          console.log('🔵 Donation submission response:', response);
+
+          console.log('🔵 Removing stored PayPal data...');
+          sessionStorage.removeItem('paypal_form_data');
+
+          // Clear URL parameters after successful processing
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.delete('token');
+          currentUrl.searchParams.delete('PayerID');
+
+          console.log('🔵 Clearing URL parameters, new URL:', currentUrl.toString());
+
+          // Update browser history without the PayPal parameters
+          window.history.replaceState({}, document.title, currentUrl.toString());
+
+          console.log('🔵 Handling donation response...');
+          return paymentProcessors.handleDonationResponse(response, formData.frequency);
+        } catch (error) {
+          console.error('🔴 PayPal return processing error:', error);
+          const $form = state.currentForm;
+          if ($form) {
+            console.log('🔵 Showing error on form...');
+            ui.showError($form, 'There was an error processing your PayPal payment. Please try again or contact support.');
+          }
+          paymentProcessors.handleError(error, $form);
+          return false;
+        }
+      }
+
+      console.log('🔵 Unexpected PayPal return state');
+      return false;
     },
 
     findPayPalForm(storedData) {
+      console.log('🔵 findPayPalForm called with:', storedData);
+
       // Try multiple methods to find the form
       let $form = $(storedData.formSelector);
+      console.log('🔵 Trying stored selector:', storedData.formSelector, 'Result:', $form.length);
 
       if (!$form.length) {
+        console.log('🔵 Stored selector failed, trying to find any donation form...');
         $form = $('form')
           .filter(function () {
-            return $(this).find('[data-donate="complete-button"]').length > 0;
+            const hasButton = $(this).find('[data-donate="complete-button"]').length > 0;
+            console.log('🔵 Checking form:', $(this).attr('id'), 'has button:', hasButton);
+            return hasButton;
           })
           .first();
+        console.log('🔵 Found form via filter:', $form.length, 'ID:', $form.attr('id'));
       }
 
       return $form;
     },
 
     handleDonationResponse(response, frequency) {
+      console.log('🔵 handleDonationResponse called', { response, frequency });
+
       let parsedResponse = response;
       if (typeof response === 'string') {
+        console.log('🔵 Response is string, parsing...');
         try {
           parsedResponse = JSON.parse(response);
+          console.log('🔵 Parsed response:', parsedResponse);
         } catch (e) {
+          console.error('🔴 Failed to parse response:', e);
           throw new Error('Invalid response format');
         }
       }
 
       if (parsedResponse.Success === true) {
+        console.log('🔵 Donation successful!');
         const txCode = parsedResponse.Result.Transaction.TxCode;
+        console.log('🔵 Transaction code:', txCode);
+
         $('[data-donate="transaction-number"]').text(txCode);
+        console.log('🔵 Set transaction number in UI');
+
+        console.log('🔵 Showing success screen for frequency:', frequency);
         ui.showSuccessScreen(frequency);
         ui.toggleProcessing(false);
         return parsedResponse;
       } else {
+        console.error('🔴 Donation failed:', parsedResponse);
         // Log error to Sentry with transaction details
         if (typeof Sentry !== 'undefined') {
           Sentry.withScope(function (scope) {
@@ -744,7 +934,7 @@ $(document).ready(function () {
     },
 
     handleError(error, $form) {
-      console.error('Payment error:', error);
+      console.error('🔴 Payment error:', error);
 
       if (typeof Sentry !== 'undefined') {
         Sentry.captureException(error);
@@ -755,6 +945,7 @@ $(document).ready(function () {
     },
 
     logErrorToZapier(error) {
+      console.log('🔵 Logging error to Zapier...');
       fetch('https://ipapi.co/json/')
         .then((res) => res.json())
         .then((ipData) => {
@@ -844,6 +1035,8 @@ $(document).ready(function () {
           isAskedToCoverAdminFee: true,
         };
 
+        console.log('🔵 Credit card donation data prepared:', donationData);
+
         const response = await api.submitDonation(donationData);
         const parsedResponse = paymentProcessors.handleDonationResponse(response, formData.frequency);
         state.currentForm.submit();
@@ -912,14 +1105,18 @@ $(document).ready(function () {
    */
   const eventHandlers = {
     init() {
+      console.log('🔵 eventHandlers.init called');
+
       // Tribute checkboxes
       $('[data-donate="dedicate-this-donation"] input[type=checkbox]').on('change', function () {
+        console.log('🔵 Honour checkbox changed');
         if ($(this).is(':checked')) {
           ui.updateEcardDesigns('honour');
         }
       });
 
       $('[data-donate="dedicate-in-memory"] input[type=checkbox]').on('change', function () {
+        console.log('🔵 Memory checkbox changed');
         if ($(this).is(':checked')) {
           ui.updateEcardDesigns('memory');
         }
@@ -928,16 +1125,23 @@ $(document).ready(function () {
       // Payment method selection
       $(document).on('change', '[data-donate="payment-method"] input[type="radio"]', function () {
         const paymentMethod = $(this).val();
+        console.log('🔵 Payment method changed:', paymentMethod);
         $('[data-donate="credit-card-fields"]').toggle(paymentMethod === 'credit-card');
         $('[data-donate="paypal-fields"]').toggle(paymentMethod === 'paypal');
       });
 
       // PayPal button
       $(document).on('click', '[data-donate="paypal-button"]', function (e) {
+        console.log('🔵 PayPal button clicked');
         e.preventDefault();
-        if (state.isProcessing) return;
+        if (state.isProcessing) {
+          console.log('🔵 Already processing, ignoring click');
+          return;
+        }
 
         const $form = $(this).closest('form');
+        console.log('🔵 PayPal form found:', { formId: $form.attr('id'), formLength: $form.length });
+
         $(this).css('opacity', '0.5');
         $(this).prop('disabled', true);
         state.currentForm = $form;
@@ -946,10 +1150,16 @@ $(document).ready(function () {
 
       // Credit card submit button
       $(document).on('click', '[data-donate="complete-button"]', function (e) {
+        console.log('🔵 Complete button clicked');
         e.preventDefault();
-        if (state.isProcessing) return;
+        if (state.isProcessing) {
+          console.log('🔵 Already processing, ignoring click');
+          return;
+        }
 
         const $form = $(this).closest('form');
+        console.log('🔵 Credit card form found:', { formId: $form.attr('id'), formLength: $form.length });
+
         $(this).prop('disabled', true);
         ui.toggleProcessing(true);
         $form.find('[data-donate="complete-button"] .btn_main_text').text('Processing...');
@@ -960,9 +1170,13 @@ $(document).ready(function () {
       // Moneris message handler
       if (window.addEventListener) {
         window.addEventListener('message', monerisHandler.handleResponse, false);
+        console.log('🔵 Moneris message handler added');
       } else if (window.attachEvent) {
         window.attachEvent('onmessage', monerisHandler.handleResponse);
+        console.log('🔵 Moneris message handler added (legacy)');
       }
+
+      console.log('🔵 Event handlers initialized');
     },
   };
 
@@ -970,27 +1184,42 @@ $(document).ready(function () {
    * Initialization
    */
   const init = async () => {
+    console.log('🔵 init function called');
+
     // Set up UTM source mapping
     const utmSource = utils.getUrlParameter('utm_source');
+    console.log('🔵 UTM source:', utmSource);
+
     if (utmSource && CONFIG.utmSourceMapping[utmSource]) {
       state.subEventCustomPart = CONFIG.utmSourceMapping[utmSource];
+      console.log('🔵 Set subEventCustomPart to:', state.subEventCustomPart);
     }
 
     // Check language
     const utmId = utils.getUrlParameter('utm_id');
+    console.log('🔵 UTM ID:', utmId);
+
     if (utmId === 'fr' || $('html').attr('lang') === 'fr') {
       state.isFrench = true;
       state.subEventCustomPart += 'FR';
+      console.log('🔵 French language detected, updated subEventCustomPart to:', state.subEventCustomPart);
     }
 
     // Check if returning from PayPal
+    console.log('🔵 Checking for PayPal return...');
     const isPayPalReturn = await paymentProcessors.handlePayPalReturn();
+    console.log('🔵 PayPal return result:', isPayPalReturn);
 
     // Only initialize event handlers if not processing PayPal return
     //    //ToDo: may need this even if it's a paypal return
     if (!isPayPalReturn) {
+      console.log('🔵 Initializing event handlers...');
       eventHandlers.init();
+    } else {
+      console.log('🔵 Skipping event handler initialization due to PayPal return');
     }
+
+    console.log('🔵 Initialization complete');
   };
 
   // Start the application
