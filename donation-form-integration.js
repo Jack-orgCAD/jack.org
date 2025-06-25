@@ -14,7 +14,7 @@ $(document).ready(function() {
     let isFrench = false;
 
     let organizationId = 196;
-    let subEventCustomPart = "YE25W"; // Default value
+    let subEventCustomPart = "donatenow"; // Default value
 
     // Function to get URL parameters
     function getUrlParameter(name) {
@@ -27,15 +27,7 @@ $(document).ready(function() {
     // Set subEventCustomPart based on utm_source
     const utmSource = getUrlParameter('utm_source');
     const utmSourceMapping = {
-      '34705': 'YE25BRE',
-      '34694': 'YE25W',
-      '34700': 'YE25A',
-      '34703': 'YE25DM',
-      '34695': 'YE25M1',
-      '34696': 'YE25M2',
-      '34697': 'YE25M3',
-      '34698': 'YE25M4',
-      '34769' : 'Fall25A'
+      '20981': 'donatenow',
     };
 
     if (utmSource && utmSourceMapping[utmSource]) {
