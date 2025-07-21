@@ -1,4 +1,5 @@
 $(document).ready(function() {
+  alert("Donation form integration script loaded successfully!");
   // Check if any donation form exists on the page
   if ($("[data-donate='complete-button']").length > 0) {
 
@@ -398,7 +399,7 @@ $(document).ready(function() {
             throw new Error("Invalid response format");
           }
         }
-        
+        console.log("Parsed response:", parsedResponse);
         if (parsedResponse.Success === true) {
           const txCode = parsedResponse.Result.Transaction.TxCode;
           $('[data-donate="transaction-number"]').text(txCode);
