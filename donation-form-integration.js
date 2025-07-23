@@ -410,6 +410,27 @@ $(document).ready(function() {
             $('[data-donate="success-monthly"]').show();
             $('[data-donate="success-otg"]').hide();
           }
+
+          // Push donation data to dataLayer for Google Tag Manager
+          dataLayer.push({
+            event: "purchase",
+            ecommerce: {
+              transaction_id: txCode,
+              value: parseFloat(donationAmount),
+              tax: 0.00,
+              shipping: 0.00,
+              currency: "CAD",
+              items: [
+                {
+                  item_id: "donation",
+                  item_name: "donation",
+                  affiliation: subEventCustomPart,
+                  price: donationAmount,
+                  quantity: 1
+                }
+              ]
+            }
+          });
           
           $("body").removeClass("form-submitting");
           return parsedResponse;
