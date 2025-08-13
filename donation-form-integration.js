@@ -230,9 +230,9 @@ $(document).ready(function() {
                 currency: "CAD",
                 items: [
                   {
-                    item_id: "donation",
+                    item_id: frequency + " - " + donationAmount,
                     item_name: "donation",
-                    affiliation: frequency + " - " + donationAmount,
+                    affiliation: isFrench,
                     price: donationAmount,
                     quantity: 1
                   }
@@ -916,9 +916,9 @@ $(document).ready(function() {
                 currency: "CAD",
                 items: [
                   {
-                    item_id: "donation",
+                    item_id: frequency + " - " + donationAmount,
                     item_name: "donation",
-                    affiliation: frequency + " - " + donationAmount,
+                    affiliation: isFrench,
                     price: donationAmount,
                     quantity: 1
                   }
