@@ -424,7 +424,7 @@ $(document).ready(function() {
                 {
                   item_id: "donation",
                   item_name: "donation",
-                  affiliation: subEventCustomPart,
+                  affiliation: frequency + " - " + donationAmount,
                   price: donationAmount,
                   quantity: 1
                 }
