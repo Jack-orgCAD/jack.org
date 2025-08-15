@@ -412,6 +412,7 @@ $(document).ready(function() {
           }
 
           // Push donation data to dataLayer for Google Tag Manager
+          window.dataLayer = window.dataLayer || [];
           dataLayer.push({
             event: "purchase",
             ecommerce: {
@@ -424,7 +425,7 @@ $(document).ready(function() {
                 {
                   item_id: frequency + " - " + donationAmount,
                   item_name: "donation",
-                  affiliation: isFrench,
+                  affiliation: isFrench ? "fr" : "en",
                   price: donationAmount,
                   quantity: 1
                 }
