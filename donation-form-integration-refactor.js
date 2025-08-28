@@ -24,7 +24,7 @@ $(document).ready(function () {
       fallbackDonation: 'https://jack.akaraisin.com/ui/donatenow',
     },
     organizationId: 196,
-    defaultSubEvent: 'YE25W',
+    defaultSubEvent: 'donatenow',
     sponsoredEntityTypes: {
       Event: 1,
       Team: 2,
@@ -32,15 +32,7 @@ $(document).ready(function () {
       Group: 4,
     },
     utmSourceMapping: {
-      '34705': 'YE25BRE',
-      '34694': 'YE25W',
-      '34700': 'YE25A',
-      '34703': 'YE25DM',
-      '34695': 'YE25M1',
-      '34696': 'YE25M2',
-      '34697': 'YE25M3',
-      '34698': 'YE25M4',
-      '34769': 'Fall25A',
+      '20981': 'donatenow'
     },
   };
 
@@ -514,8 +506,30 @@ $(document).ready(function () {
       } else if (frequency === 'monthly') {
         $('[data-donate="success-monthly"]').show();
         $('[data-donate="success-otg"]').hide();
+
         console.log('🔵 Showing monthly success screen');
       }
+      // Push donation data to dataLayer for Google Tag Manager
+      window.dataLayer = window.dataLayer || [];
+      dataLayer.push({
+        event: "purchase",
+        ecommerce: {
+          transaction_id: txCode,
+          value: parseFloat(donationAmount),
+          tax: 0.00,
+          shipping: 0.00,
+          currency: "CAD",
+          items: [
+            {
+              item_id: frequency + " - " + donationAmount,
+              item_name: "donation",
+              affiliation: isFrench ? "fr" : "en",
+              price: donationAmount,
+              quantity: 1
+            }
+          ]
+        }
+      });
     },
 
     showSuccessScreen(frequency = 'one-time') {
@@ -531,6 +545,28 @@ $(document).ready(function () {
         $('[data-donate="success-otg"]').hide();
         console.log('🔵 Showing monthly success screen');
       }
+
+      // Push donation data to dataLayer for Google Tag Manager
+      window.dataLayer = window.dataLayer || [];
+      dataLayer.push({
+        event: "purchase",
+        ecommerce: {
+          transaction_id: txCode,
+          value: parseFloat(donationAmount),
+          tax: 0.00,
+          shipping: 0.00,
+          currency: "CAD",
+          items: [
+            {
+              item_id: frequency + " - " + donationAmount,
+              item_name: "donation",
+              affiliation: isFrench ? "fr" : "en",
+              price: donationAmount,
+              quantity: 1
+            }
+          ]
+        }
+      });
     },
 
     toggleProcessing(isProcessing) {
