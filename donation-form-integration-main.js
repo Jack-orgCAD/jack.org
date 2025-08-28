@@ -510,26 +510,26 @@ $(document).ready(function () {
           console.log('🔵 Showing monthly success screen');
         }
         // Push donation data to dataLayer for Google Tag Manager
-        window.dataLayer = window.dataLayer || [];
-        dataLayer.push({
-          event: "purchase",
-          ecommerce: {
-            transaction_id: txCode,
-            value: parseFloat(donationAmount),
-            tax: 0.00,
-            shipping: 0.00,
-            currency: "CAD",
-            items: [
-              {
-                item_id: frequency + " - " + donationAmount,
-                item_name: "donation",
-                affiliation: isFrench ? "fr" : "en",
-                price: donationAmount,
-                quantity: 1
-              }
-            ]
-          }
-        });
+        // window.dataLayer = window.dataLayer || [];
+        // dataLayer.push({
+        //   event: "purchase",
+        //   ecommerce: {
+        //     transaction_id: "txCode",
+        //     value: parseFloat(donationAmount),
+        //     tax: 0.00,
+        //     shipping: 0.00,
+        //     currency: "CAD",
+        //     items: [
+        //       {
+        //         item_id: frequency + " - " + donationAmount,
+        //         item_name: "donation",
+        //         affiliation: isFrench ? "fr" : "en",
+        //         price: donationAmount,
+        //         quantity: 1
+        //       }
+        //     ]
+        //   }
+        // });
       },
   
       showSuccessScreen(frequency = 'one-time') {
@@ -547,26 +547,26 @@ $(document).ready(function () {
         }
   
         // Push donation data to dataLayer for Google Tag Manager
-        window.dataLayer = window.dataLayer || [];
-        dataLayer.push({
-          event: "purchase",
-          ecommerce: {
-            transaction_id: txCode,
-            value: parseFloat(donationAmount),
-            tax: 0.00,
-            shipping: 0.00,
-            currency: "CAD",
-            items: [
-              {
-                item_id: frequency + " - " + donationAmount,
-                item_name: "donation",
-                affiliation: isFrench ? "fr" : "en",
-                price: donationAmount,
-                quantity: 1
-              }
-            ]
-          }
-        });
+        // window.dataLayer = window.dataLayer || [];
+        // dataLayer.push({
+        //   event: "purchase",
+        //   ecommerce: {
+        //     transaction_id: "txCode",
+        //     value: parseFloat(donationAmount),
+        //     tax: 0.00,
+        //     shipping: 0.00,
+        //     currency: "CAD",
+        //     items: [
+        //       {
+        //         item_id: frequency + " - " + donationAmount,
+        //         item_name: "donation",
+        //         affiliation: isFrench ? "fr" : "en",
+        //         price: donationAmount,
+        //         quantity: 1
+        //       }
+        //     ]
+        //   }
+        // });
       },
   
       toggleProcessing(isProcessing) {
