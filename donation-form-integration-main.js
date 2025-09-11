@@ -509,27 +509,32 @@ $(document).ready(function () {
   
           console.log('🔵 Showing monthly success screen');
         }
+        let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
+        let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
+        let frequency = formData?.frequency || "one-time"; // Extract frequency from form data
+        let isFrench = state?.isFrench || false; // Use state to determine language
+
         // Push donation data to dataLayer for Google Tag Manager
-        // window.dataLayer = window.dataLayer || [];
-        // dataLayer.push({
-        //   event: "purchase",
-        //   ecommerce: {
-        //     transaction_id: "txCode",
-        //     value: parseFloat(donationAmount),
-        //     tax: 0.00,
-        //     shipping: 0.00,
-        //     currency: "CAD",
-        //     items: [
-        //       {
-        //         item_id: frequency + " - " + donationAmount,
-        //         item_name: "donation",
-        //         affiliation: isFrench ? "fr" : "en",
-        //         price: donationAmount,
-        //         quantity: 1
-        //       }
-        //     ]
-        //   }
-        // });
+        window.dataLayer = window.dataLayer || [];
+        dataLayer.push({
+          event: "purchase",
+          ecommerce: {
+            transaction_id: txCode,
+            value: donationAmount,
+            tax: 0.00,
+            shipping: 0.00,
+            currency: "CAD",
+            items: [
+              {
+                item_id: frequency + " - " + donationAmount,
+                item_name: "donation",
+                affiliation: isFrench ? "fr" : "en",
+                price: donationAmount,
+                quantity: 1
+              }
+            ]
+          }
+        });
       },
   
       showSuccessScreen(frequency = 'one-time') {
@@ -545,28 +550,32 @@ $(document).ready(function () {
           $('[data-donate="success-otg"]').hide();
           console.log('🔵 Showing monthly success screen');
         }
-  
+        let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
+        let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
+        let frequency = formData?.frequency || "one-time"; // Extract frequency from form data
+        let isFrench = state?.isFrench || false; // Use state to determine language
+
         // Push donation data to dataLayer for Google Tag Manager
-        // window.dataLayer = window.dataLayer || [];
-        // dataLayer.push({
-        //   event: "purchase",
-        //   ecommerce: {
-        //     transaction_id: "txCode",
-        //     value: parseFloat(donationAmount),
-        //     tax: 0.00,
-        //     shipping: 0.00,
-        //     currency: "CAD",
-        //     items: [
-        //       {
-        //         item_id: frequency + " - " + donationAmount,
-        //         item_name: "donation",
-        //         affiliation: isFrench ? "fr" : "en",
-        //         price: donationAmount,
-        //         quantity: 1
-        //       }
-        //     ]
-        //   }
-        // });
+        window.dataLayer = window.dataLayer || [];
+        dataLayer.push({
+          event: "purchase",
+          ecommerce: {
+            transaction_id: "txCode",
+            value: donationAmount,
+            tax: 0.00,
+            shipping: 0.00,
+            currency: "CAD",
+            items: [
+              {
+                item_id: frequency + " - " + donationAmount,
+                item_name: "donation",
+                affiliation: isFrench ? "fr" : "en",
+                price: donationAmount,
+                quantity: 1
+              }
+            ]
+          }
+        });
       },
   
       toggleProcessing(isProcessing) {
