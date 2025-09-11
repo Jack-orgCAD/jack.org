@@ -560,7 +560,7 @@ $(document).ready(function () {
         dataLayer.push({
           event: "purchase",
           ecommerce: {
-            transaction_id: "txCode",
+            transaction_id: txCode,
             value: donationAmount,
             tax: 0.00,
             shipping: 0.00,
