@@ -511,7 +511,6 @@ $(document).ready(function () {
         }
         let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
         let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
-        let frequency = formData?.frequency || "one-time"; // Extract frequency from form data
         let isFrench = state?.isFrench || false; // Use state to determine language
 
         // Push donation data to dataLayer for Google Tag Manager
@@ -552,7 +551,6 @@ $(document).ready(function () {
         }
         let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
         let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
-        let frequency = formData?.frequency || "one-time"; // Extract frequency from form data
         let isFrench = state?.isFrench || false; // Use state to determine language
 
         // Push donation data to dataLayer for Google Tag Manager
