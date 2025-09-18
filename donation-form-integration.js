@@ -509,9 +509,9 @@ $(document).ready(function () {
   
           console.log('🔵 Showing monthly success screen');
         }
-        let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
-        let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
-        let isFrench = state?.isFrench || false; // Use state to determine language
+        // let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
+        // let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
+        // let isFrench = state?.isFrench || false; // Use state to determine language
 
         // Push donation data to dataLayer for Google Tag Manager
         // window.dataLayer = window.dataLayer || [];
@@ -549,9 +549,9 @@ $(document).ready(function () {
           $('[data-donate="success-otg"]').hide();
           console.log('🔵 Showing monthly success screen');
         }
-        let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
-        let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
-        let isFrench = state?.isFrench || false; // Use state to determine language
+        // let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
+        // let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
+        // let isFrench = state?.isFrench || false; // Use state to determine language
 
         // Push donation data to dataLayer for Google Tag Manager
         // window.dataLayer = window.dataLayer || [];
