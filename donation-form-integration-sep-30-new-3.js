@@ -1154,14 +1154,6 @@ $(document).ready(function () {
             console.log('🔵 Already processing, ignoring click');
             return;
           }
-
-            // Check reCAPTCHA
-            const recaptchaResponse = grecaptcha.getResponse();
-            if (!recaptchaResponse) {
-              console.log('🔴 reCAPTCHA not completed');
-              ui.showError(state.currentForm, 'Please complete the reCAPTCHA to proceed.');
-              return;
-            }
   
           const $form = $(this).closest('form');
           console.log('🔵 PayPal form found:', { formId: $form.attr('id'), formLength: $form.length });
@@ -1190,6 +1182,13 @@ $(document).ready(function () {
           }
 
           const $form = $(this).closest('form');
+          if ($form.length) {
+            state.currentForm = $form;
+            console.log('🔵 Current form set:', state.currentForm.attr('id'));
+          } else {
+            console.error('🔴 Form not found');
+            return;
+          }
           console.log('🔵 Credit card form found:', { formId: $form.attr('id'), formLength: $form.length });
   
           $(this).prop('disabled', true);
