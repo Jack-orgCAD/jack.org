@@ -32,7 +32,7 @@ $(document).ready(function () {
         Group: 4,
       },
       utmSourceMapping: {
-        '20981': 'donatenow'
+        '39066': 'annualcampaign2025'
       },
     };
   
@@ -509,31 +509,6 @@ $(document).ready(function () {
   
           console.log('🔵 Showing monthly success screen');
         }
-        // let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
-        // let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
-        // let isFrench = state?.isFrench || false; // Use state to determine language
-
-        // Push donation data to dataLayer for Google Tag Manager
-        // window.dataLayer = window.dataLayer || [];
-        // dataLayer.push({
-        //   event: "purchase",
-        //   ecommerce: {
-        //     transaction_id: txCode,
-        //     value: donationAmount,
-        //     tax: 0.00,
-        //     shipping: 0.00,
-        //     currency: "CAD",
-        //     items: [
-        //       {
-        //         item_id: frequency + " - " + donationAmount,
-        //         item_name: "donation",
-        //         affiliation: isFrench ? "fr" : "en",
-        //         price: donationAmount,
-        //         quantity: 1
-        //       }
-        //     ]
-        //   }
-        // });
       },
   
       showSuccessScreen(frequency = 'one-time') {
@@ -549,31 +524,6 @@ $(document).ready(function () {
           $('[data-donate="success-otg"]').hide();
           console.log('🔵 Showing monthly success screen');
         }
-        // let txCode = parsedResponse?.Result?.Transaction?.TxCode || "unknown"; // Extract transaction ID from response
-        // let donationAmount = parseFloat(formData?.donationAmount || 0); // Extract donation amount from form data
-        // let isFrench = state?.isFrench || false; // Use state to determine language
-
-        // Push donation data to dataLayer for Google Tag Manager
-        // window.dataLayer = window.dataLayer || [];
-        // dataLayer.push({
-        //   event: "purchase",
-        //   ecommerce: {
-        //     transaction_id: txCode,
-        //     value: donationAmount,
-        //     tax: 0.00,
-        //     shipping: 0.00,
-        //     currency: "CAD",
-        //     items: [
-        //       {
-        //         item_id: frequency + " - " + donationAmount,
-        //         item_name: "donation",
-        //         affiliation: isFrench ? "fr" : "en",
-        //         price: donationAmount,
-        //         quantity: 1
-        //       }
-        //     ]
-        //   }
-        // });
       },
   
       toggleProcessing(isProcessing) {
@@ -662,7 +612,7 @@ $(document).ready(function () {
           };
   
           const response = await api.submitDonation(donationData);
-          return paymentProcessors.handleDonationResponse(response, formData.frequency);
+          return paymentProcessors.handleDonationResponse(response, formData.frequency, formData.donationAmount);
         } catch (error) {
           paymentProcessors.handleError(error, $form);
           throw error;
@@ -886,7 +836,7 @@ $(document).ready(function () {
             window.history.replaceState({}, document.title, currentUrl.toString());
   
             console.log('🔵 Handling donation response...');
-            return paymentProcessors.handleDonationResponse(response, formData.frequency);
+            return paymentProcessors.handleDonationResponse(response, formData.frequency, formData.donationAmount);
           } catch (error) {
             console.error('🔴 PayPal return processing error:', error);
             const $form = state.currentForm;
@@ -925,7 +875,7 @@ $(document).ready(function () {
         return $form;
       },
   
-      handleDonationResponse(response, frequency) {
+      handleDonationResponse(response, frequency, donationAmount = 0) {
         console.log('🔵 handleDonationResponse called', { response, frequency });
   
         let parsedResponse = response;
@@ -951,6 +901,29 @@ $(document).ready(function () {
           console.log('🔵 Showing success screen for frequency:', frequency);
           ui.showSuccessScreen(frequency);
           ui.toggleProcessing(false);
+
+          // Push donation data to dataLayer for Google Tag Manager
+          window.dataLayer = window.dataLayer || [];
+          dataLayer.push({
+            event: "purchase",
+            ecommerce: {
+              transaction_id: txCode,
+              value: donationAmount,
+              tax: 0.00,
+              shipping: 0.00,
+              currency: "CAD",
+              items: [
+                {
+                  item_id: frequency + " - " + donationAmount,
+                  item_name: "donation",
+                  affiliation: "en",
+                  price: donationAmount,
+                  quantity: 1
+                }
+              ]
+            }
+        });
+
           return parsedResponse;
         } else {
           console.error('🔴 Donation failed:', parsedResponse);
@@ -1081,7 +1054,7 @@ $(document).ready(function () {
           console.log('🔵 Credit card donation data prepared:', donationData);
   
           const response = await api.submitDonation(donationData);
-          const parsedResponse = paymentProcessors.handleDonationResponse(response, formData.frequency);
+          const parsedResponse = paymentProcessors.handleDonationResponse(response, formData.frequency, formData.donationAmount);
           state.currentForm.submit();
           return true;
         } catch (error) {
