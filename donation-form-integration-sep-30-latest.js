@@ -24,7 +24,7 @@ $(document).ready(function () {
         fallbackDonation: 'https://jack.akaraisin.com/ui/donatenow',
       },
       organizationId: 196,
-      defaultSubEvent: 'donatenow',
+      defaultSubEvent: 'annualcampaign2025',
       sponsoredEntityTypes: {
         Event: 1,
         Team: 2,
