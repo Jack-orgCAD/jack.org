@@ -915,7 +915,7 @@ $(document).ready(function () {
               items: [
                 {
                   item_id: frequency + " - " + donationAmount,
-                  item_name: "donation",
+                  item_name: "Website Donation - Annual Giving Campaign",
                   affiliation: "en",
                   price: donationAmount,
                   quantity: 1
