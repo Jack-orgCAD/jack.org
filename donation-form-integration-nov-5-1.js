@@ -535,9 +535,42 @@ $(document).ready(function () {
   
       showError($form, message) {
         console.log('🔵 showError called', { message, formId: $form?.attr('id') });
-        $form.find('#cc-error').text(message).show();
-        $form.find('[data-donate="complete-button"]').prop('disabled', false);
-        $form.find('[data-donate="complete-button"] .btn_main_text').text('Donate');
+
+        // Determine a safe form reference (use passed form, fallback to #donate-form, then any donation form)
+        const $safeForm = ($form && $form.length)
+          ? $form
+          : ($('#donate-form').length
+            ? $('#donate-form')
+            : $('form').filter(function () {
+                return $(this).find('[data-donate="complete-button"]').length > 0;
+              }).first()
+          );
+
+        if (!$safeForm || !$safeForm.length) {
+          console.error('🔴 No form available to display error, falling back to global element or alert');
+          ui.toggleProcessing(false);
+
+          // Try global cc-error element if present
+          const $globalError = $('#cc-error');
+          if ($globalError.length) {
+            $globalError.text(message).show();
+          } else {
+            alert(message); // last resort
+          }
+          return;
+        }
+
+        // Show or create inline error container
+        const $ccError = $safeForm.find('#cc-error');
+        if ($ccError.length) {
+          $ccError.text(message).show();
+        } else {
+          $safeForm.prepend('<div id="cc-error" style="color:#c00;margin-bottom:10px;">' + message + '</div>');
+        }
+
+        // Re-enable button and reset text/state
+        $safeForm.find('[data-donate="complete-button"]').prop('disabled', false);
+        $safeForm.find('[data-donate="complete-button"] .btn_main_text').text('Donate');
         ui.toggleProcessing(false);
         console.log('🔵 Error displayed on form');
       },
@@ -1164,38 +1197,42 @@ $(document).ready(function () {
           paymentProcessors.processPayPal($form);
         });
   
-        // Credit card submit button
-        $(document).on('click', '[data-donate="complete-button"]', function (e) {
-          console.log('🔵 Complete button clicked');
-          e.preventDefault();
-          if (state.isProcessing) {
-            console.log('🔵 Already processing, ignoring click');
-            return;
-          }
+       // Credit card submit button
+       $(document).on('click', '[data-donate="complete-button"]', function (e) {
+        console.log('🔵 Complete button clicked');
+        e.preventDefault();
+        if (state.isProcessing) {
+          console.log('🔵 Already processing, ignoring click');
+          return;
+        }
 
-          // Check reCAPTCHA
-          const recaptchaResponse = grecaptcha.getResponse();
-          if (!recaptchaResponse) {
-            console.log('🔴 reCAPTCHA not completed');
-            ui.showError(state.currentForm, 'Please complete the reCAPTCHA to proceed.');
-            return;
-          }
+        const $form = $(this).closest('form');
+        if (!$form.length) {
+          console.error('🔴 Form not found');
+          return;
+        }
+        state.currentForm = $form;
 
-          const $form = $(this).closest('form');
-          if ($form.length) {
-            state.currentForm = $form;
-            console.log('🔵 Current form set:', state.currentForm.attr('id'));
-          } else {
-            console.error('🔴 Form not found');
-            return;
-          }
-          console.log('🔵 Credit card form found:', { formId: $form.attr('id'), formLength: $form.length });
-  
-          $(this).prop('disabled', true);
-          ui.toggleProcessing(true);
-          $form.find('[data-donate="complete-button"] .btn_main_text').text('Processing...');
-          state.currentForm = $form;
-          monerisHandler.initiate();
+        // Check reCAPTCHA
+        if (typeof grecaptcha === 'undefined') {
+          console.error('🔴 grecaptcha not loaded');
+          ui.showError(state.currentForm, 'reCAPTCHA is not loaded. Please try again later.');
+          return;
+        }
+        const recaptchaResponse = grecaptcha.getResponse();
+        if (!recaptchaResponse) {
+          console.log('🔴 reCAPTCHA not completed');
+          ui.showError(state.currentForm, 'Please complete the reCAPTCHA to proceed.');
+          return;
+        }
+
+        console.log('🔵 Credit card form found:', { formId: $form.attr('id'), formLength: $form.length });
+
+        $(this).prop('disabled', true);
+        ui.toggleProcessing(true);
+        $form.find('[data-donate="complete-button"] .btn_main_text').text('Processing...');
+        state.currentForm = $form;
+        monerisHandler.initiate();
         });
   
         // Moneris message handler
