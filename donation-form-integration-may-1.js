@@ -291,7 +291,7 @@ $(document).ready(function () {
           organization: formData.isDonatingOnBehalfOfCompany ? formData.organization : '',
           receiveCommunications: !formData.optOutOfCommunications,
           allowDistributionOfDetails: formData.isAnonymousDonation,
-          isCharityOrg: formData.isCharitableOrg,
+          isCharityOrg: formData.isDonatingOnBehalfOfCompany ? formData.isCharitableOrg : false,
         };
       },
   
