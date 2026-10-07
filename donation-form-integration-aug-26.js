@@ -24,7 +24,7 @@ $(document).ready(function () {
         fallbackDonation: 'https://jack.akaraisin.com/ui/donatenow',
       },
       organizationId: 196,
-      defaultSubEvent: 'fallappeal2026',
+      defaultSubEvent: 'donatenow',
       sponsoredEntityTypes: {
         Event: 1,
         Team: 2,
@@ -32,7 +32,7 @@ $(document).ready(function () {
         Group: 4,
       },
       utmSourceMapping: {
-        '42353': 'fallappeal2026'
+        '20981': 'donatenow'
       },
     };
   
@@ -1301,7 +1301,7 @@ $(document).ready(function () {
   
       if (utmId === 'fr' || $('html').attr('lang') === 'fr') {
         state.isFrench = true;
-        state.subEventCustomPart += 'FR';
+        // state.subEventCustomPart += 'FR';
         console.log('🔵 French language detected, updated subEventCustomPart to:', state.subEventCustomPart);
       }
   
