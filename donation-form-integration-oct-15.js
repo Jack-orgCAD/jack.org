@@ -145,6 +145,48 @@ $(document).ready(function () {
         const n = parseFloat(s);
         return isNaN(n) ? '' : n.toFixed(2);
       },
+
+      // Webflow validates every [required] field on submit, including hidden tribute/e-card ones.
+      // Only fields that are currently visible keep their original required state.
+      syncRequiredFields($form) {
+        $form.find('input, select, textarea').each(function () {
+          const $field = $(this);
+          if ($field.data('wasRequired') === undefined) $field.data('wasRequired', $field.prop('required'));
+          if (!$field.data('wasRequired')) return;
+
+          const isChoice = $field.is(':radio, :checkbox');
+          const isShown = isChoice ? $field.parent().is(':visible') : $field.is(':visible');
+          $field.prop('required', isShown);
+        });
+      },
+
+      // Returns a label for the first visible required field left empty, or null
+      findMissingRequiredField($form) {
+        utils.syncRequiredFields($form);
+        let missing = null;
+        $form.find('[required]').each(function () {
+          const $field = $(this);
+          const name = $field.attr('name');
+          let isEmpty;
+          if ($field.is(':radio')) {
+            isEmpty = !$form.find(`input:radio[name="${name}"]:checked`).length;
+          } else if ($field.is(':checkbox')) {
+            isEmpty = !$field.is(':checked');
+          } else {
+            isEmpty = !($field.val() || '').toString().trim();
+          }
+          if (isEmpty) {
+            const label = $field.attr('data-name') || name || $field.attr('placeholder') || $field.attr('data-donate') || '';
+            try {
+              missing = decodeURIComponent(label);
+            } catch (e) {
+              missing = label;
+            }
+            return false;
+          }
+        });
+        return missing;
+      },
     };
   
     /**
@@ -456,8 +498,8 @@ $(document).ready(function () {
   
           tribute.eCard = {
             templateId: templateId,
-            message: $form.find('[data-donate="message"]').val().trim(),
-            deliveryDate: $form.find('[data-donate="date"]').val().trim(),
+            message: ($form.find('[data-donate="message"]').val() || '').trim(),
+            deliveryDate: ($form.find('[data-donate="date"]').val() || '').trim(),
             recipients: dataBuilders.buildEcardRecipients($form),
           };
         }
@@ -470,9 +512,9 @@ $(document).ready(function () {
           .find('[data-donate="add"]')
           .map(function () {
             const $block = $(this);
-            const email = $block.find('[data-donate="recipient-email"]').val().trim();
-            const firstName = $block.find('[data-donate="recipient-first-name"]').val().trim();
-            const lastName = $block.find('[data-donate="recipient-last-name"]').val().trim();
+            const email = ($block.find('[data-donate="recipient-email"]').val() || '').trim();
+            const firstName = ($block.find('[data-donate="recipient-first-name"]').val() || '').trim();
+            const lastName = ($block.find('[data-donate="recipient-last-name"]').val() || '').trim();
   
             if (email && firstName) {
               return {
@@ -1150,6 +1192,7 @@ $(document).ready(function () {
   
           const response = await api.submitDonation(donationData);
           const parsedResponse = paymentProcessors.handleDonationResponse(response, formData.frequency, formData.donationAmount, donationType);
+          utils.syncRequiredFields(state.currentForm);
           state.currentForm.submit();
           return true;
         } catch (error) {
@@ -1215,24 +1258,36 @@ $(document).ready(function () {
      * Event Handlers
      */
     const eventHandlers = {
-      updateTributeeRequirement($form) {
-        const isTribute = $form.find(
-          '[data-donate="dedicate-this-donation"] input[type=checkbox], [data-donate="dedicate-in-memory"] input[type=checkbox]'
-        ).is(':checked');
-        $form.find('[data-donate="tributee-first-name"]').prop('required', isTribute);
+      validateDonationForm($form) {
+        const preCheck = formHelpers.getFormData($form);
+        if (!preCheck.donationAmount || parseFloat(preCheck.donationAmount) <= 0) {
+          ui.showError($form, state.isFrench
+            ? 'Veuillez entrer un montant de don valide.'
+            : 'Please enter a valid donation amount.');
+          return false;
+        }
+
+        const missingField = utils.findMissingRequiredField($form);
+        if (missingField !== null) {
+          ui.showError($form, state.isFrench
+            ? `Veuillez remplir le champ obligatoire : ${missingField}`
+            : `Please fill out the required field: ${missingField}`);
+          return false;
+        }
+
+        return true;
       },
 
       init() {
         console.log('🔵 eventHandlers.init called');
 
         $('form').each(function () {
-          eventHandlers.updateTributeeRequirement($(this));
+          utils.syncRequiredFields($(this));
         });
   
         // Tribute checkboxes
         $('[data-donate="dedicate-this-donation"] input[type=checkbox]').on('change', function () {
           console.log('🔵 Honour checkbox changed');
-          eventHandlers.updateTributeeRequirement($(this).closest('form'));
           if ($(this).is(':checked')) {
             ui.updateEcardDesigns('honour');
           }
@@ -1240,7 +1295,6 @@ $(document).ready(function () {
   
         $('[data-donate="dedicate-in-memory"] input[type=checkbox]').on('change', function () {
           console.log('🔵 Memory checkbox changed');
-          eventHandlers.updateTributeeRequirement($(this).closest('form'));
           if ($(this).is(':checked')) {
             ui.updateEcardDesigns('memory');
           }
@@ -1266,13 +1320,7 @@ $(document).ready(function () {
           const $form = $(this).closest('form');
           console.log('🔵 PayPal form found:', { formId: $form.attr('id'), formLength: $form.length });
 
-          const preCheck = formHelpers.getFormData($form);
-          if (!preCheck.donationAmount || parseFloat(preCheck.donationAmount) <= 0) {
-            ui.showError($form, state.isFrench
-              ? 'Veuillez entrer un montant de don valide.'
-              : 'Please enter a valid donation amount.');
-            return;
-          }
+          if (!eventHandlers.validateDonationForm($form)) return;
 
           $(this).css('opacity', '0.5');
           $(this).prop('disabled', true);
@@ -1309,13 +1357,7 @@ $(document).ready(function () {
           return;
         }
 
-        const preCheck = formHelpers.getFormData($form);
-        if (!preCheck.donationAmount || parseFloat(preCheck.donationAmount) <= 0) {
-          ui.showError($form, state.isFrench
-            ? 'Veuillez entrer un montant de don valide.'
-            : 'Please enter a valid donation amount.');
-          return;
-        }
+        if (!eventHandlers.validateDonationForm($form)) return;
 
         console.log('🔵 Credit card form found:', { formId: $form.attr('id'), formLength: $form.length });
 
