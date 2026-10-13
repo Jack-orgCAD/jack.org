@@ -1215,12 +1215,24 @@ $(document).ready(function () {
      * Event Handlers
      */
     const eventHandlers = {
+      updateTributeeRequirement($form) {
+        const isTribute = $form.find(
+          '[data-donate="dedicate-this-donation"] input[type=checkbox], [data-donate="dedicate-in-memory"] input[type=checkbox]'
+        ).is(':checked');
+        $form.find('[data-donate="tributee-first-name"]').prop('required', isTribute);
+      },
+
       init() {
         console.log('🔵 eventHandlers.init called');
+
+        $('form').each(function () {
+          eventHandlers.updateTributeeRequirement($(this));
+        });
   
         // Tribute checkboxes
         $('[data-donate="dedicate-this-donation"] input[type=checkbox]').on('change', function () {
           console.log('🔵 Honour checkbox changed');
+          eventHandlers.updateTributeeRequirement($(this).closest('form'));
           if ($(this).is(':checked')) {
             ui.updateEcardDesigns('honour');
           }
@@ -1228,6 +1240,7 @@ $(document).ready(function () {
   
         $('[data-donate="dedicate-in-memory"] input[type=checkbox]').on('change', function () {
           console.log('🔵 Memory checkbox changed');
+          eventHandlers.updateTributeeRequirement($(this).closest('form'));
           if ($(this).is(':checked')) {
             ui.updateEcardDesigns('memory');
           }
