@@ -493,8 +493,12 @@ $(document).ready(function () {
         // Add eCard if selected
         const $form = state.currentForm;
         if (utils.normalizeChoice($form.find('[data-donate="ecard-selection"] input:checked').val()) === 'e-card') {
+          // Prefer designs shown for the current tribute type/language; hidden ones can hold stale or non-numeric values
+          const $designs = $form.find('[data-donate="ecard-design"]:visible input');
           const templateId =
-            parseInt($form.find('[data-donate="ecard-design"] input:checked').val(), 10) || parseInt($form.find('[data-donate="ecard-design"] input:visible:first').val(), 10);
+            parseInt($designs.filter(':checked').val(), 10) ||
+            parseInt($designs.first().val(), 10) ||
+            parseInt($form.find('[data-donate="ecard-design"] input:checked').val(), 10);
   
           tribute.eCard = {
             templateId: templateId,
@@ -1402,7 +1406,8 @@ $(document).ready(function () {
   
       if (utmId === 'fr' || $('html').attr('lang') === 'fr') {
         state.isFrench = true;
-        // state.subEventCustomPart += 'FR';
+        // French e-card templates only exist under the FR sub-event
+        state.subEventCustomPart += 'FR';
         console.log('🔵 French language detected, updated subEventCustomPart to:', state.subEventCustomPart);
       }
   
